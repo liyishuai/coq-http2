@@ -31,7 +31,7 @@ Definition lt_precedence (p1 p2:Precedence) : bool :=
   let d2 := deficit_of p2 in
   (d1 <? d2) && ((d2 - d1) <=? deficitSteps).
 
-
+(* Buggy, recursion goes up, so result is 257::258::... *)
 Definition deficitList : list N :=
   let idxs :=
       N.recursion nil (fun i acc => i :: acc) 256 in
