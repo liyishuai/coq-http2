@@ -1,5 +1,4 @@
-From Coq Require Vector.
-From Coq Require Import NArith String.
+From Coq Require Import Bvector NArith String.
 Open Scope N_scope.
 Open Scope type_scope.
 
@@ -116,7 +115,7 @@ Definition toErrorCodeId (e:ErrorCode) : ErrorCodeId :=
 Coercion toErrorCodeId : ErrorCode >-> ErrorCodeId.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
-Definition FrameFlags  := Vector.t bool 8.
+Definition FrameFlags  := Bvector 8.
 Inductive  FrameHeader :=
   { payloadLength : N;
     flags         : FrameFlags;
@@ -124,18 +123,63 @@ Inductive  FrameHeader :=
   }.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6 *)
-Definition FrameType    := N.
+Definition FrameTypeId    := N.
+Inductive FrameType :=
+  DataType                      (* 0x0 *)
+| HeadersType                   (* 0x1 *)
+| PriorityType                  (* 0x2 *)
+| RSTStreamType                 (* 0x3 *)
+| SettingsType                  (* 0x4 *)
+| PushPromiseType               (* 0x5 *)
+| PingType                      (* 0x6 *)
+| GoAwayType                    (* 0x7 *)
+| WindowUpdateType              (* 0x8 *)
+| ContinuationType              (* 0x9 *)
+| UnknownType : FrameTypeId -> FrameType.
+
+Definition fromFrameTypeId (id : FrameTypeId) : FrameType :=
+  match id with
+  | 0 => DataType
+  | 1 => HeadersType
+  | 2 => PriorityType
+  | 3 => RSTStreamType
+  | 4 => SettingsType
+  | 5 => PushPromiseType
+  | 6 => PingType
+  | 7 => GoAwayType
+  | 8 => WindowUpdateType
+  | 9 => ContinuationType
+  | _ => UnknownType id
+  end.
+Coercion fromFrameTypeId : FrameTypeId >-> FrameType.
+
+Definition toFrameTypeId (type : FrameType) : FrameTypeId :=
+  match type with
+  | DataType         => 0
+  | HeadersType      => 1
+  | PriorityType     => 2
+  | RSTStreamType    => 3
+  | SettingsType     => 4
+  | PushPromiseType  => 5
+  | PingType         => 6
+  | GoAwayType       => 7
+  | WindowUpdateType => 8
+  | ContinuationType => 9
+  | UnknownType id   => id
+  end.
+Coercion toFrameTypeId : FrameType >-> FrameTypeId.
+
 Inductive  FramePayload : FrameType -> Type :=
-  DataFrame         : string                                -> FramePayload 0
-| HeadersFrame      : option Priority -> HeaderBlockFragment -> FramePayload 1
-| PriorityFrame     : Priority                              -> FramePayload 2
-| RSTStreamFrame    : ErrorCode                             -> FramePayload 3
-| SettingsFrame     : list Setting                          -> FramePayload 4
-| PushPromiseFrame  : StreamId        -> HeaderBlockFragment -> FramePayload 5
-| PingFrame         : string                                -> FramePayload 6
-| GoAwayFrame       : StreamId         -> ErrorCode -> string -> FramePayload 7
-| WindowUpdateFrame : WindowSize                            -> FramePayload 8
-| ContinuationFrame : HeaderBlockFragment                   -> FramePayload 9
+  DataFrame         : string                                -> FramePayload DataType
+| HeadersFrame      : option Priority -> HeaderBlockFragment -> FramePayload HeadersType
+| PriorityFrame     : Priority                              -> FramePayload PriorityType
+| RSTStreamFrame    : ErrorCode                             -> FramePayload RSTStreamType
+| SettingsFrame     : list Setting                          -> FramePayload SettingsType
+| PushPromiseFrame  : StreamId        -> HeaderBlockFragment -> FramePayload PushPromiseType
+| PingFrame         : Bvector 64                            -> FramePayload PingType
+| GoAwayFrame       : StreamId         -> ErrorCode -> string -> FramePayload GoAwayType
+| WindowUpdateFrame : WindowSize                            -> FramePayload WindowUpdateType
+| ContinuationFrame : HeaderBlockFragment                   -> FramePayload ContinuationType
 | UnknownFrame type : string                                -> FramePayload type.
 
 Inductive Frame :=
