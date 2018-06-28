@@ -22,13 +22,34 @@ Inductive Priority :=
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
 Definition SettingValue := N.
 Inductive  SettingKeyId :=
-  SettingHeaderTableSize
-| SettingEnablePush
-| SettingMaxConcurrentStreams
-| SettingInitialWindowSize
-| SettingMaxFrameSize
-| SettingMaxHeaderBlockSize.
-Definition Setting := SettingValue * SettingKeyId.
+  SettingHeaderTableSize        (* 0x1 *)
+| SettingEnablePush             (* 0x2 *)
+| SettingMaxConcurrentStreams   (* 0x3 *)
+| SettingInitialWindowSize      (* 0x4 *)
+| SettingMaxFrameSize           (* 0x5 *)
+| SettingMaxHeaderBlockSize.    (* 0x6 *)
+Definition Setting  := SettingKeyId * SettingValue.
+
+Definition fromSettingKeyId (id : SettingKeyId) : N :=
+  match id with
+  | SettingHeaderTableSize      => 1
+  | SettingEnablePush           => 2
+  | SettingMaxConcurrentStreams => 3
+  | SettingInitialWindowSize    => 4
+  | SettingMaxFrameSize         => 5
+  | SettingMaxHeaderBlockSize   => 6
+  end.
+
+Definition toSettingKeyId (n : N) : option SettingKeyId :=
+  match n with
+  | 1 => Some SettingHeaderTableSize
+  | 2 => Some SettingEnablePush
+  | 3 => Some SettingMaxConcurrentStreams
+  | 4 => Some SettingInitialWindowSize
+  | 5 => Some SettingMaxFrameSize
+  | 6 => Some SettingMaxHeaderBlockSize
+  | _ => None
+  end.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.9 *)
 Definition WindowSize := N.
@@ -93,7 +114,7 @@ Definition toErrorCodeId (e:ErrorCode) : ErrorCodeId :=
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Definition FrameFlags  := Vector.t bool 8.
 Inductive  FrameHeader :=
-  { payloadLength : nat;
+  { payloadLength : N;
     flags         : FrameFlags;
     streamId      : StreamId
   }.
