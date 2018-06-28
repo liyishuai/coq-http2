@@ -52,6 +52,44 @@ Inductive ErrorCodeId :=
 | HTTP11Required                (* 0xd *)
 | UnknownErrorCode : ErrorCode -> ErrorCodeId.
 
+Definition fromErrorCodeId (e:ErrorCodeId) : ErrorCode :=
+  match e with
+  | NoError              => 0x0
+  | ProtocolError        => 0x1
+  | InternalError        => 0x2
+  | FlowControlError     => 0x3
+  | SettingsTimeout      => 0x4
+  | StreamClosed         => 0x5
+  | FrameSizeError       => 0x6
+  | RefusedStream        => 0x7
+  | Cancel               => 0x8
+  | CompressionError     => 0x9
+  | ConnectError         => 0xa
+  | EnhanceYourCalm      => 0xb
+  | InadequateSecurity   => 0xc
+  | HTTP11Required       => 0xd
+  | (UnknownErrorCode w) => w
+  end.
+
+Definition toErrorCodeId (e:ErrorCode) : ErrorCodeId :=
+  match e with
+  | 0x0 => NoError
+  | 0x1 => ProtocolError
+  | 0x2 => InternalError
+  | 0x3 => FlowControlError
+  | 0x4 => SettingsTimeout
+  | 0x5 => StreamClosed
+  | 0x6 => FrameSizeError
+  | 0x7 => RefusedStream
+  | 0x8 => Cancel
+  | 0x9 => CompressionError
+  | 0xa => ConnectError
+  | 0xb => EnhanceYourCalm
+  | 0xc => InadequateSecurity
+  | 0xd => HTTP11Required
+  | w   => UnknownErrorCode w
+  end.
+
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Definition FrameFlags  := Vector.t bool 8.
 Inductive  FrameHeader :=
