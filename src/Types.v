@@ -29,8 +29,8 @@ Inductive  SettingKey   :=
 | SettingMaxConcurrentStreams   (* 0x3 *)
 | SettingInitialWindowSize      (* 0x4 *)
 | SettingMaxFrameSize           (* 0x5 *)
-| SettingMaxHeaderBlockSize.    (* 0x6 *)
-| SettingUnknown : SettingKeyId -> SettingKey
+| SettingMaxHeaderBlockSize     (* 0x6 *)
+| SettingUnknown : SettingKeyId -> SettingKey.
 (* Extensions are permitted to use new settings. (Section 5.5) *)
 Definition Setting  := SettingKey * SettingValue.
 
