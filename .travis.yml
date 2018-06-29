@@ -3,8 +3,8 @@ language: ocaml
 cache:
   apt: true
   directories:
-  - $HOME/.opam
-  - $HOME/Library/Caches/Homebrew
+  - "$HOME/.opam"
+  - "$HOME/Library/Caches/Homebrew"
 addons:
   apt:
     sources:
@@ -23,15 +23,12 @@ env:
 matrix:
   fast_finish: true
   allow_failures:
-    - os: osx
+  - os: osx
 os:
-    - linux
-    - osx
-
-before_install:
-    if [ $TRAVIS_OS_NAME = osx ]; then
-    brew update; brew install --ignore-dependencies ocaml opam; fi
-
+- linux
+- osx
+before_install: if [ $TRAVIS_OS_NAME = osx ]; then brew update; brew install --ignore-dependencies
+  ocaml opam; fi
 install:
 - "[ -e .opam ] || opam init"
 - eval $(opam config env)
@@ -39,7 +36,9 @@ install:
 - ocamlc -v
 - opam install $COQ
 - opam list
-
 script:
 - set -e
 - make -j
+notifications:
+  slack:
+    secure: Nlt6Mls1DNmlEMhWK5UqJDAomg/dIvclJhcOiNkWyBmy3sNLecZukUP/41LOcAag5xCTD2QxyLyFP3WbX99LIVK3xdPF8GrjEGgAaiCtveXJbn1qZfUOuywF0TAUsy/X6pCfb19dkxDeU8FB0R71+bKphMCBe2v/m4JSu05nkUVmiwu4tXgcw8rRlBvOL6FKhk7c5F6b8xLOjI1gBOIDIOpexIMWRWSZdRBJ+aGkEJJHhuAY6k+nzShlbsfucuV2jk+WWy0GTAH1vHGLVN8T9BKwZSck1z3I4jYMdRwvsAnSDgaVy/ESlo1zAKcCWIUKzqXnVPNHJRINR7SnB/wR17QdlwixXGmFV5fquxJqJgT1bl1LO47kaA0MaEoOb5BtUiO9uouM9JOGaRj5d21m2xsJiPM6FMmLtdAjmSBaU5xt+8fQQn5lIXezAO0+gOq4SIL0Pwm1JvwjvQoNlKO6UE9XyV8ZBwjcyWE1OriJiU9wLtVO6kPGhI8ybVpKogan0v7/qTkwVi+oubtc3BQ1+cWtCfTVfFd/WFPhNrfDbcKmDuN37bFHFHNC1Ai1lbL1s/tbVDYcmLCpXeGnBCP+JNvXs/bAhUr5km4DivHDX96wJnV5jUcexQ29Hna13FmjgyZA5fK4lCQmXz+pnr9/HMGQhjUJHk2qonmVgx9XIjI=
