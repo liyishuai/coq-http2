@@ -5,7 +5,7 @@ Open Scope N_scope.
 Open Scope string_scope.
 
 Definition EncodeInfo :=
-  (FrameFlags * StreamId * option N)%type.
+  (FrameFlagsField * StreamId * option N)%type.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Definition encodeFrameHeader (f:Frame) : string :=

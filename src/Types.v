@@ -1,4 +1,6 @@
-From Coq Require Import Bvector NArith String.
+From Coq Require Import List Bvector NArith String.
+From HTTP2 Require Import Util.BitField.
+Import ListNotations.
 Open Scope N_scope.
 Open Scope type_scope.
 
@@ -115,10 +117,10 @@ Definition toErrorCodeId (e:ErrorCode) : ErrorCodeId :=
 Coercion toErrorCodeId : ErrorCode >-> ErrorCodeId.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
-Definition FrameFlags  := Bvector 8.
+Definition FrameFlagsField  := Bvector 8.
 Inductive  FrameHeader :=
   { payloadLength : N;
-    flags         : FrameFlags;
+    flags         : FrameFlagsField;
     streamId      : StreamId
   }.
 
@@ -168,6 +170,72 @@ Definition toFrameTypeId (type : FrameType) : FrameTypeId :=
   | UnknownType id   => id
   end.
 Coercion toFrameTypeId : FrameType >-> FrameTypeId.
+
+Inductive FrameFlags : FrameType -> Type :=
+| DataFlags
+    (END_STREAM : Bit 0)
+    (PADDED     : Bit 3)
+  : FrameFlags DataType
+| HeadersFlags
+    (END_STREAM  : Bit 0)
+    (END_HEADERS : Bit 2)
+    (PADDED      : Bit 3)
+    (PRIORITY    : Bit 5)
+  : FrameFlags HeadersType
+| PriorityFlags  : FrameFlags PriorityType
+| RSTStreamFlags : FrameFlags RSTStreamType
+| SettingsFlags
+    (ACK : Bit 0)
+  : FrameFlags SettingsType
+| PushPromiseFlags
+    (END_HEADERS : Bit 2)
+    (PADDED      : Bit 8)
+  : FrameFlags PushPromiseType
+| PingFlags
+    (ACK : Bit 0)
+  : FrameFlags PingType
+| GoAwayFlags : FrameFlags GoAwayType
+| WindowUpdateFlags : FrameFlags WindowUpdateType
+| ContinuationFlags
+    (END_HEADERS : Bit 2)
+  : FrameFlags ContinuationType
+| UnknownFlags type : FrameFlags (UnknownType type)
+.
+
+Definition fromFrameFlagsField type (fff : FrameFlagsField) :
+  FrameFlags type :=
+  let b n := @toBit _ n fff in
+  (* The position [n] of each bit is inferred. *)
+  match type with
+  | DataType => DataFlags (b _) (b _)
+  | HeadersType => HeadersFlags (b _) (b _) (b _) (b _)
+  | PriorityType => PriorityFlags
+  | RSTStreamType => RSTStreamFlags
+  | SettingsType => SettingsFlags (b _)
+  | PushPromiseType => PushPromiseFlags (b _) (b _)
+  | PingType => PingFlags (b _)
+  | GoAwayType => GoAwayFlags
+  | WindowUpdateType => WindowUpdateFlags
+  | ContinuationType => ContinuationFlags (b _)
+  | UnknownType _ => UnknownFlags _
+  end.
+
+Definition toFrameFlagsField type (ff : FrameFlags type) :
+  FrameFlagsField :=
+  let bits := List.fold_right (BVor _) (Bvect_false 8) in
+  let b {n} (_x : Bit n) := fromBit _x in
+  bits
+    match ff with
+    | DataFlags _1 _2 => [b _1; b _2]
+    | HeadersFlags _1 _2 _3 _4 => [b _1; b _2; b _3; b _4]
+    | SettingsFlags _1 => [b _1]
+    | PushPromiseFlags _1 _2 => [b _1; b _2]
+    | PingFlags _1 => [b _1]
+    | ContinuationFlags _1 => [b _1]
+    | PriorityFlags | RSTStreamFlags
+    | GoAwayFlags | WindowUpdateFlags
+    | UnknownFlags _ => []
+    end%list.
 
 Inductive  FramePayload : FrameType -> Type :=
   DataFrame         : string                                -> FramePayload DataType
