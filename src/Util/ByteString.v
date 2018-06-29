@@ -8,13 +8,9 @@ Fixpoint pack {n : nat} (v : Bvector n) : string :=
   | _ => ""
   end.
 
-(* Need for help: Coq cannot guess decreasing argument of fix.
-Fixpoint unpack (s : string) (n : nat) : Bvector n :=
-  match s,n with
-  | _, 0 => Bnil
-  | String (Ascii b0 b1 b2 b3 b4 b5 b6 b7) s', S(S(S(S(S(S(S(S n'))))))) =>
-    b0::b1::b2::b3::b4::b5::b6::b7::unpack s' n'
-  | _, S n' =>
-    false::unpack "" n'
+Fixpoint unpack (s : string) : Bvector (length s * 8) :=
+  match s with
+  | EmptyString => Bnil
+  | String (Ascii b0 b1 b2 b3 b4 b5 b6 b7) s' =>
+    b0::b1::b2::b3::b4::b5::b6::b7::unpack s'
   end.
- *)
