@@ -30,17 +30,19 @@ Inductive  SettingKey   :=
 | SettingInitialWindowSize      (* 0x4 *)
 | SettingMaxFrameSize           (* 0x5 *)
 | SettingMaxHeaderBlockSize.    (* 0x6 *)
+| SettingUnknown : SettingKeyId -> SettingKey
+(* Extensions are permitted to use new settings. (Section 5.5) *)
 Definition Setting  := SettingKey * SettingValue.
 
-Definition fromSettingKeyId (id : SettingKeyId) : option SettingKey :=
+Definition fromSettingKeyId (id : SettingKeyId) : SettingKey :=
   match id with
-  | 1 => Some SettingHeaderTableSize
-  | 2 => Some SettingEnablePush
-  | 3 => Some SettingMaxConcurrentStreams
-  | 4 => Some SettingInitialWindowSize
-  | 5 => Some SettingMaxFrameSize
-  | 6 => Some SettingMaxHeaderBlockSize
-  | _ => None
+  | 1 => SettingHeaderTableSize
+  | 2 => SettingEnablePush
+  | 3 => SettingMaxConcurrentStreams
+  | 4 => SettingInitialWindowSize
+  | 5 => SettingMaxFrameSize
+  | 6 => SettingMaxHeaderBlockSize
+  | _ => SettingUnknown id
   end.
 
 Definition toSettingKeyId (key : SettingKey) : SettingKeyId :=
@@ -51,6 +53,7 @@ Definition toSettingKeyId (key : SettingKey) : SettingKeyId :=
   | SettingInitialWindowSize    => 4
   | SettingMaxFrameSize         => 5
   | SettingMaxHeaderBlockSize   => 6
+  | SettingUnknown id           => id
   end.
 Coercion toSettingKeyId : SettingKey >-> SettingKeyId.
 
@@ -75,6 +78,7 @@ Inductive ErrorCode :=
 | InadequateSecurity            (* 0xc *)
 | HTTP11Required                (* 0xd *)
 | UnknownErrorCode : ErrorCodeId -> ErrorCode.
+(* Extensions are permitted to use new error codes. (Section 5.5) *)
 
 Definition fromErrorCodeId (e:ErrorCodeId) : ErrorCode :=
   match e with
@@ -138,6 +142,7 @@ Inductive FrameType :=
 | WindowUpdateType              (* 0x8 *)
 | ContinuationType              (* 0x9 *)
 | UnknownType : FrameTypeId -> FrameType.
+(* Extensions are permitted to define new frame types. (Section 5.5) *)
 
 Definition fromFrameTypeId (id : FrameTypeId) : FrameType :=
   match id with
