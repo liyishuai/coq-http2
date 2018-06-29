@@ -16,9 +16,6 @@ env:
   global:
   - OPAMYES=true
   matrix:
-  - COQ="coq.8.7.0"
-  - COQ="coq.8.7.1"
-  - COQ="coq.8.7.2"
   - COQ="coq.8.8.0"
 matrix:
   fast_finish: true
@@ -41,4 +38,5 @@ script:
 - make -j
 notifications:
   slack:
+    on_success: change
     secure: Nlt6Mls1DNmlEMhWK5UqJDAomg/dIvclJhcOiNkWyBmy3sNLecZukUP/41LOcAag5xCTD2QxyLyFP3WbX99LIVK3xdPF8GrjEGgAaiCtveXJbn1qZfUOuywF0TAUsy/X6pCfb19dkxDeU8FB0R71+bKphMCBe2v/m4JSu05nkUVmiwu4tXgcw8rRlBvOL6FKhk7c5F6b8xLOjI1gBOIDIOpexIMWRWSZdRBJ+aGkEJJHhuAY6k+nzShlbsfucuV2jk+WWy0GTAH1vHGLVN8T9BKwZSck1z3I4jYMdRwvsAnSDgaVy/ESlo1zAKcCWIUKzqXnVPNHJRINR7SnB/wR17QdlwixXGmFV5fquxJqJgT1bl1LO47kaA0MaEoOb5BtUiO9uouM9JOGaRj5d21m2xsJiPM6FMmLtdAjmSBaU5xt+8fQQn5lIXezAO0+gOq4SIL0Pwm1JvwjvQoNlKO6UE9XyV8ZBwjcyWE1OriJiU9wLtVO6kPGhI8ybVpKogan0v7/qTkwVi+oubtc3BQ1+cWtCfTVfFd/WFPhNrfDbcKmDuN37bFHFHNC1Ai1lbL1s/tbVDYcmLCpXeGnBCP+JNvXs/bAhUr5km4DivHDX96wJnV5jUcexQ29Hna13FmjgyZA5fK4lCQmXz+pnr9/HMGQhjUJHk2qonmVgx9XIjI=
