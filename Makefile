@@ -1,9 +1,9 @@
 V=@
 
-all: all
+all: coq
 
-%: Makefile.coq
-	$(MAKE) -f $< $@
+coq: Makefile.coq
+	$(MAKE) -f $<
 
 Makefile.coq: _CoqProject
 	coq_makefile -f $< -o $@
