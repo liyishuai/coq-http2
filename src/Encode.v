@@ -7,9 +7,6 @@ Open Scope N_scope.
 Open Scope list_scope.
 Open Scope string_scope.
 
-Definition EncodeInfo :=
-  (FrameFlagsField * StreamId * option N)%type.
-
 (* Converts bool to single bit string *)
 Definition bool_to_string (b:bool) : string :=
   if b then "1" else "0".
@@ -22,6 +19,20 @@ Fixpoint binnat_to_bin_string (i:N) (n:nat) : string :=
   | S n' => val ++ binnat_to_bin_string i n'
   end.
 
+Definition pad_len (p:option N) : string :=
+  match p with
+  | None => ""
+  | Some n =>
+    (* Pad Length? (8) *)
+    binnat_to_bin_string n 8
+  end.
+
+Definition padding (p:option N) : string :=
+  match p with
+  | None => ""
+  | Some n =>
+    N.peano_rect (fun _ => string) "" (fun n' s => "0" ++ s) n
+  end.
 
 (* Converts boolean vector v of length n to an n bit MSB binary string.
    Note BVectors are LSB, https://coq.inria.fr/library/Coq.Bool.Bvector.html *)
@@ -47,10 +58,19 @@ Definition encodeFrameHeader (f:Frame) : string :=
 
 (* TODO: add padding for all of these *)
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.1 *)
-Definition buildData (s:string) := (* Data ( * ) *) s.
+Definition buildData (p:option N) (s:string) :=
+  (* Pad Length? (8) *)
+  pad_len p ++
+  (* Data ( * ) *)
+  s ++
+  (* Padding ( * ) *)
+  padding p.
+
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.2 *)
-Definition buildHeaders (op:option Priority) (hbf:HeaderBlockFragment) :=
+Definition buildHeaders (p:option N) (op:option Priority) (hbf:HeaderBlockFragment) :=
+  (* Pad Length? (8) *)
+  pad_len p ++
   match op with
   | None => ""
   | Some p =>
@@ -62,7 +82,9 @@ Definition buildHeaders (op:option Priority) (hbf:HeaderBlockFragment) :=
     binnat_to_bin_string (weight p) 8
   end
     (* Header Block Fragment ( * ) *)
-    ++ hbf.
+    ++ hbf ++
+    (* Padding ( * ) *)
+    padding p.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.3 *)
 Definition buildPriority (p:Priority) :=
@@ -90,13 +112,19 @@ Fixpoint buildSettings (sets:list Setting) :=
   end.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.6 *)
-Definition buildPushPromise (sid:StreamId) (hbf:HeaderBlockFragment) :=
+Definition buildPushPromise (p:option N) (sid:StreamId)
+           (hbf:HeaderBlockFragment) :=
+  (* Pad Length? (8) *)
+  pad_len p ++
   (* R: A single reserved bit *)
   "0" ++
   (* Promised Stream ID (31) *)
   binnat_to_bin_string sid 31 ++
   (* Header block Fragment ( * ) *)
-  hbf.
+  hbf ++
+  (* Padding ( * ) *)
+  padding p
+.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.7 *)
 Definition buildPing (v:Bvector 64) :=
@@ -126,21 +154,21 @@ Definition buildContinuation (hbf:HeaderBlockFragment) :=
   (* Header Block Fragment ( * ) *) hbf.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6 *)
-Definition encodePayload (f:Frame) : string :=
+Definition encodePayload (padding:option N) (f:Frame) : string :=
   match framePayload f with
-  | DataFrame s => buildData s
-  | HeadersFrame op hbf => buildHeaders op hbf
+  | DataFrame s => buildData padding s
+  | HeadersFrame op hbf => buildHeaders padding op hbf
   | PriorityFrame p => buildPriority p
   | RSTStreamFrame e => buildRSTStream e
   | SettingsFrame sets => buildSettings sets
-  | PushPromiseFrame sid hbf => buildPushPromise sid hbf
+  | PushPromiseFrame sid hbf => buildPushPromise padding sid hbf
   | PingFrame v => buildPing v
   | GoAwayFrame sid e s => buildGoAway sid e s
   | WindowUpdateFrame ws => buildWindowUpdate ws
   | ContinuationFrame hbf => buildContinuation hbf
-  | UnknownFrame _ s => buildData s
+  | UnknownFrame _ s => buildData padding s
   end.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
-Definition encodeFrame (f:Frame) : string :=
-  encodeFrameHeader f ++ encodePayload f.
+Definition encodeFrame (padding:option N) (f:Frame) : string :=
+  encodeFrameHeader f ++ encodePayload padding f.
