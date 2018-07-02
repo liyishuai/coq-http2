@@ -1,6 +1,7 @@
 -R src HTTP2
 src/Util/BitField.v
-src/Util/ByteString.v
+src/Util/BitString.v
+src/Util/ByteVector.v
 src/Types.v
 src/Encode.v
 src/Decode.v
