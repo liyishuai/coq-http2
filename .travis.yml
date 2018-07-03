@@ -27,7 +27,7 @@ os:
 before_install: if [ $TRAVIS_OS_NAME = osx ]; then brew update; brew install --ignore-dependencies
   ocaml opam; fi
 install:
-- "[ -e .opam ] || opam init"
+- "[ -e ~/.opam ] || opam init"
 - eval $(opam config env)
 - opam config var root
 - ocamlc -v
@@ -38,5 +38,4 @@ script:
 - make -j
 notifications:
   slack:
-    on_success: change
-    secure: Nlt6Mls1DNmlEMhWK5UqJDAomg/dIvclJhcOiNkWyBmy3sNLecZukUP/41LOcAag5xCTD2QxyLyFP3WbX99LIVK3xdPF8GrjEGgAaiCtveXJbn1qZfUOuywF0TAUsy/X6pCfb19dkxDeU8FB0R71+bKphMCBe2v/m4JSu05nkUVmiwu4tXgcw8rRlBvOL6FKhk7c5F6b8xLOjI1gBOIDIOpexIMWRWSZdRBJ+aGkEJJHhuAY6k+nzShlbsfucuV2jk+WWy0GTAH1vHGLVN8T9BKwZSck1z3I4jYMdRwvsAnSDgaVy/ESlo1zAKcCWIUKzqXnVPNHJRINR7SnB/wR17QdlwixXGmFV5fquxJqJgT1bl1LO47kaA0MaEoOb5BtUiO9uouM9JOGaRj5d21m2xsJiPM6FMmLtdAjmSBaU5xt+8fQQn5lIXezAO0+gOq4SIL0Pwm1JvwjvQoNlKO6UE9XyV8ZBwjcyWE1OriJiU9wLtVO6kPGhI8ybVpKogan0v7/qTkwVi+oubtc3BQ1+cWtCfTVfFd/WFPhNrfDbcKmDuN37bFHFHNC1Ai1lbL1s/tbVDYcmLCpXeGnBCP+JNvXs/bAhUr5km4DivHDX96wJnV5jUcexQ29Hna13FmjgyZA5fK4lCQmXz+pnr9/HMGQhjUJHk2qonmVgx9XIjI=
+    secure: e0s+oq1d5BYea7RMvlItGs7YHqm2bO8O4ox3PkUM2nFuXgYt8Ej6OZvNWBiJgZj4MrpeIuFGjHFEB0ZGto1WPRvUp1y9OMXcB0r8Z/g2oENEY+iqUQWQh0kFMiy9GK4TrSytYMoRdFEUHKSaNyutN0WQHvWsDHTlMxwalwoTc+Wre2qV/abRgMC2vbQfhlt1ZszZyZQ1oIJzBcMDljSoZlzDvWjpFRASQ5k7MSTyCLVXjA9xGHXaZ8ucCaf6KYswq2yEp2c49OdH/ts22IhtiMDkHVKVcl6Vk5YItpPv7oqWlDdsTeNffDfjQz/ne4vgThGorMntrSaSwbnDC4GIHeXEGfNwbL2Z037jNDmF/YpFyvKj+bCP5RJCwuHuR7jhONbkm1UoUVKQVgHi3+qn9gWZ61gYz7njrc+jagspmYuWRNYOsz6S+X/CfI1DOR4f5I5oF22ufpnDYhDFLEtbjwj3K5WUBfdzCJyV7tRnmmuRkAE1Y69iuNO2lv40M8nO8iTfX0g53gVNqP+Qbn0J+jqfcjFKDZgJgBV9anE9PIAJl72rNznbI6G6mVZvmeTQXMs0llu0TTo8SLc61WK8jUI/Y3SwQhoaoiH9ppTmbviTEyYNb8Dawi1Noy3W3wF7CFkSzqQXVJ4sWCEDX3L/VD7ooP6rX3GrKQomAGKM6yo=

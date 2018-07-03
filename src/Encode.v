@@ -1,4 +1,4 @@
-From HTTP2 Require Import Types Util.BitField Util.ByteVector Util.ByteString.
+From HTTP2 Require Import Types Util.BitField Util.ByteVector Util.BitString.
 From Coq Require Import Bvector String BinNat List.
 Open Scope N_scope.
 Open Scope string_scope.
@@ -122,7 +122,7 @@ Definition buildGoAway (sid:StreamId) (e:ErrorCode) (s:string) :=
   (* R *)
   (* Last-Stream-ID (31) *)
   streamid_to_string false sid ++
-  (* Error Code (32) *)    
+  (* Error Code (32) *)
   pack (binnat_to_bvector (toErrorCodeId e) 32) ++
   (* Additional Debug Data ( * ) *)
   s.
@@ -130,7 +130,7 @@ Definition buildGoAway (sid:StreamId) (e:ErrorCode) (s:string) :=
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.9 *)
 Definition buildWindowUpdate (ws:WindowSize) :=
   (* R *)
-  (* Window Size Increment (31) *)    
+  (* Window Size Increment (31) *)
   streamid_to_string false ws.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.10 *)
