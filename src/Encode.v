@@ -1,22 +1,14 @@
-From HTTP2 Require Import Types.
-From Coq Require Import BinNat.
-From Coq Require Import String.
-From Coq Require Import Bvector.
-From Coq Require Import List.
+From HTTP2 Require Import Types Util.BitField Util.ByteVector Util.ByteString.
+From Coq Require Import Bvector String BinNat List.
 Open Scope N_scope.
-Open Scope list_scope.
 Open Scope string_scope.
 
-(* Converts bool to single bit string *)
-Definition bool_to_string (b:bool) : string :=
-  if b then "1" else "0".
-
-(* Converts binary nat i to an n bit MSB binary string. *)
-Fixpoint binnat_to_bin_string (i:N) (n:nat) : string :=
-  let val := bool_to_string (N.testbit_nat i n) in
+(* Converts binary nat i to an n bit vector. *)
+Fixpoint binnat_to_bvector (i:N) (n:nat) : Bvector n :=
+  let val := N.testbit_nat i n in
   match n with
-  | O => ""
-  | S n' => val ++ binnat_to_bin_string i n'
+  | O => Bnil
+  | S n' => Bcons val n' (binnat_to_bvector i n')
   end.
 
 Definition pad_len (p:option N) : string :=
@@ -24,39 +16,35 @@ Definition pad_len (p:option N) : string :=
   | None => ""
   | Some n =>
     (* Pad Length? (8) *)
-    binnat_to_bin_string n 8
+    pack (binnat_to_bvector n 8)
   end.
 
 Definition padding (p:option N) : string :=
   match p with
   | None => ""
   | Some n =>
-    N.peano_rect (fun _ => string) "" (fun n' s => "0" ++ s) n
+    N.peano_rect (fun _ => string) "" (fun n' s => String Ascii.zero s) n
   end.
 
-(* Converts boolean vector v of length n to an n bit MSB binary string.
-   Note BVectors are LSB, https://coq.inria.fr/library/Coq.Bool.Bvector.html *)
-Definition bvector_to_bin_string {n:nat} (v:Bvector n) : string :=
-  Vector.fold_right (fun (val:bool) acc => acc ++ (bool_to_string val)) v "".
+Definition streamid_to_string (E:bool) (sid:StreamId) : string :=
+  pack (Bcons E 31 (binnat_to_bvector sid 31)).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 (* NOTE: header is the string between length and payload. *)
 Definition encodeFrameHeader (f:Frame) : string :=
   let fh := frameHeader f in
   (* Length (24) *)
-  let s_len := binnat_to_bin_string (payloadLength fh) 24 in
+  let s_len := pack (binnat_to_bvector (payloadLength fh) 24) in
   (* Type (8) *)
-  let s_ft := binnat_to_bin_string (toFrameTypeId (frameType f)) 8 in
+  let s_ft := pack (binnat_to_bvector (toFrameTypeId (frameType f)) 8) in
   (* Flags (8) *)
-  let s_flgs := bvector_to_bin_string (flags fh) in
+  let s_flgs := pack (flags fh) in
   (* R is a reserved 1-bit field, MUST remain unset when sending and MUST be
      ignored when receiving. *)
-  let R := "0" in
   (* Stream Identifier (31) *)
-  let s_si := binnat_to_bin_string (streamId fh) 31 in
-  s_ft ++ s_flgs ++ R ++ s_si.
+  let s_si := streamid_to_string false (streamId fh) in
+  s_ft ++ s_flgs ++ s_si.
 
-(* TODO: add padding for all of these *)
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.1 *)
 Definition buildData (p:option N) (s:string) :=
   (* Pad Length? (8) *)
@@ -75,11 +63,10 @@ Definition buildHeaders (p:option N) (op:option Priority) (hbf:HeaderBlockFragme
   | None => ""
   | Some p =>
     (* E *)
-    bool_to_string (exclusive p) ++
     (* StreamDependency? (31) *)
-    binnat_to_bin_string (streamDependency p) 31 ++
+    streamid_to_string (exclusive p) (streamDependency p) ++
     (* Weight? (8) *)
-    binnat_to_bin_string (weight p) 8
+    pack (binnat_to_bvector (weight p) 8)
   end
     (* Header Block Fragment ( * ) *)
     ++ hbf ++
@@ -89,16 +76,15 @@ Definition buildHeaders (p:option N) (op:option Priority) (hbf:HeaderBlockFragme
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.3 *)
 Definition buildPriority (p:Priority) :=
   (* E *)
-  bool_to_string (exclusive p) ++
   (* StreamDependency? (31) *)
-  binnat_to_bin_string (streamDependency p) 31 ++
+  streamid_to_string (exclusive p) (streamDependency p) ++
   (* Weight? (8) *)
-  binnat_to_bin_string (weight p) 8.
+  pack (binnat_to_bvector (weight p) 8).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.4 *)
 Definition buildRSTStream (e:ErrorCode) :=
   (* Error Code (32) *)
-  binnat_to_bin_string (toErrorCodeId e) 32.
+  pack (binnat_to_bvector (toErrorCodeId e) 32).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
 Fixpoint buildSettings (sets:list Setting) :=
@@ -106,9 +92,9 @@ Fixpoint buildSettings (sets:list Setting) :=
   | nil => ""
   | (sk, sv) :: tl =>
     (* Identifier (16) *)
-    binnat_to_bin_string (toSettingKeyId sk) 16
+    pack (binnat_to_bvector (toSettingKeyId sk) 16)
     (* Value (32) *)
-    ++ binnat_to_bin_string sv 32 ++ buildSettings tl
+    ++ pack (binnat_to_bvector sv 32) ++ buildSettings tl
   end.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.6 *)
@@ -117,9 +103,8 @@ Definition buildPushPromise (p:option N) (sid:StreamId)
   (* Pad Length? (8) *)
   pad_len p ++
   (* R: A single reserved bit *)
-  "0" ++
   (* Promised Stream ID (31) *)
-  binnat_to_bin_string sid 31 ++
+  streamid_to_string false sid ++
   (* Header block Fragment ( * ) *)
   hbf ++
   (* Padding ( * ) *)
@@ -127,27 +112,26 @@ Definition buildPushPromise (p:option N) (sid:StreamId)
 .
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.7 *)
-Definition buildPing (v:Bvector 64) :=
+Definition buildPing (v:ByteVector 8) :=
   (* Opaque Datra (64) *)
-  bvector_to_bin_string v.
+  to_string v.
+
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.8 *)
 Definition buildGoAway (sid:StreamId) (e:ErrorCode) (s:string) :=
   (* R *)
-  "0" ++
   (* Last-Stream-ID (31) *)
-  binnat_to_bin_string sid 31 ++
+  streamid_to_string false sid ++
   (* Error Code (32) *)    
-  binnat_to_bin_string (toErrorCodeId e) 32 ++
+  pack (binnat_to_bvector (toErrorCodeId e) 32) ++
   (* Additional Debug Data ( * ) *)
   s.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.9 *)
 Definition buildWindowUpdate (ws:WindowSize) :=
   (* R *)
-  "0" ++
   (* Window Size Increment (31) *)    
-  binnat_to_bin_string ws 31.
+  streamid_to_string false ws.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.10 *)
 Definition buildContinuation (hbf:HeaderBlockFragment) :=

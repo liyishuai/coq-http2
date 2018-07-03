@@ -1,5 +1,5 @@
 From Coq Require Import List Bvector NArith String.
-From HTTP2 Require Import Util.BitField.
+From HTTP2 Require Import Util.BitField Util.ByteVector.
 Import ListNotations.
 Open Scope N_scope.
 Open Scope type_scope.
@@ -249,7 +249,7 @@ Inductive  FramePayload : FrameType -> Type :=
 | RSTStreamFrame    : ErrorCode                             -> FramePayload RSTStreamType
 | SettingsFrame     : list Setting                          -> FramePayload SettingsType
 | PushPromiseFrame  : StreamId        -> HeaderBlockFragment -> FramePayload PushPromiseType
-| PingFrame         : Bvector 64                            -> FramePayload PingType
+| PingFrame         : ByteVector 8                          -> FramePayload PingType
 | GoAwayFrame       : StreamId         -> ErrorCode -> string -> FramePayload GoAwayType
 | WindowUpdateFrame : WindowSize                            -> FramePayload WindowUpdateType
 | ContinuationFrame : HeaderBlockFragment                   -> FramePayload ContinuationType
