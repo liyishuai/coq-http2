@@ -45,7 +45,7 @@ Definition fromSettingKeyId (id : SettingKeyId) : SettingKey :=
   | _ => SettingUnknown id
   end.
 
-Definition toSettingKeyId (key : SettingKey) : SettingKeyId :=
+Coercion toSettingKeyId (key : SettingKey) : SettingKeyId :=
   match key with
   | SettingHeaderTableSize      => 1
   | SettingEnablePush           => 2
@@ -55,7 +55,6 @@ Definition toSettingKeyId (key : SettingKey) : SettingKeyId :=
   | SettingMaxHeaderBlockSize   => 6
   | SettingUnknown id           => id
   end.
-Coercion toSettingKeyId : SettingKey >-> SettingKeyId.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.9 *)
 Definition WindowSize := N.
@@ -80,7 +79,7 @@ Inductive ErrorCode :=
 | UnknownErrorCode : ErrorCodeId -> ErrorCode.
 (* Extensions are permitted to use new error codes. (Section 5.5) *)
 
-Definition fromErrorCodeId (e:ErrorCodeId) : ErrorCode :=
+Coercion fromErrorCodeId (e:ErrorCodeId) : ErrorCode :=
   match e with
   | 0 => NoError
   | 1 => ProtocolError
@@ -98,9 +97,8 @@ Definition fromErrorCodeId (e:ErrorCodeId) : ErrorCode :=
   | 13 => HTTP11Required
   | w   => UnknownErrorCode w
   end.
-Coercion fromErrorCodeId : ErrorCodeId >-> ErrorCode.
 
-Definition toErrorCodeId (e:ErrorCode) : ErrorCodeId :=
+Coercion toErrorCodeId (e:ErrorCode) : ErrorCodeId :=
   match e with
   | NoError              => 0
   | ProtocolError        => 1
@@ -118,7 +116,6 @@ Definition toErrorCodeId (e:ErrorCode) : ErrorCodeId :=
   | HTTP11Required       => 13
   | (UnknownErrorCode w) => w
   end.
-Coercion toErrorCodeId : ErrorCode >-> ErrorCodeId.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Definition FrameFlagsField  := Bvector 8.
@@ -144,7 +141,7 @@ Inductive FrameType :=
 | UnknownType : FrameTypeId -> FrameType.
 (* Extensions are permitted to define new frame types. (Section 5.5) *)
 
-Definition fromFrameTypeId (id : FrameTypeId) : FrameType :=
+Coercion fromFrameTypeId (id : FrameTypeId) : FrameType :=
   match id with
   | 0 => DataType
   | 1 => HeadersType
@@ -158,9 +155,8 @@ Definition fromFrameTypeId (id : FrameTypeId) : FrameType :=
   | 9 => ContinuationType
   | _ => UnknownType id
   end.
-Coercion fromFrameTypeId : FrameTypeId >-> FrameType.
 
-Definition toFrameTypeId (type : FrameType) : FrameTypeId :=
+Coercion toFrameTypeId (type : FrameType) : FrameTypeId :=
   match type with
   | DataType         => 0
   | HeadersType      => 1
@@ -174,7 +170,6 @@ Definition toFrameTypeId (type : FrameType) : FrameTypeId :=
   | ContinuationType => 9
   | UnknownType id   => id
   end.
-Coercion toFrameTypeId : FrameType >-> FrameTypeId.
 
 Inductive FrameFlags : FrameType -> Type :=
 | DataFlags
