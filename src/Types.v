@@ -137,7 +137,7 @@ Inductive HTTP2Error :=
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Definition FrameFlagsField  := Bvector 8.
 Inductive  FrameHeader :=
-  { payloadLength : N;
+  { payloadLength : {n : N | n < 16777216};
     flags         : FrameFlagsField;
     streamId      : StreamId
   }.

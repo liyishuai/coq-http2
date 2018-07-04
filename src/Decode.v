@@ -3,7 +3,7 @@ From Coq Require Import NArith.
 Open Scope bool_scope.
 Open Scope N_scope.
 
-Definition decodeFrameHeader (v : ByteVector 9) : FrameType * FrameHeader :=
+Program Definition decodeFrameHeader (v : ByteVector 9) : FrameType * FrameHeader :=
   let (vlength, v3) := splitAt 3 v in
   let length := N_of_ByteVector vlength in
   let (vtype, v4) := splitAt 1 v3 in
@@ -16,7 +16,11 @@ Definition decodeFrameHeader (v : ByteVector 9) : FrameType * FrameHeader :=
                  flags         := flags;
                  streamId      := streamId |}).
 
-Definition checkFrameHeader (settings : Settings)
+Obligation 1.
+apply ByteVector_upperbound.
+Qed.
+
+Program Definition checkFrameHeader (settings : Settings)
            (typfrm : FrameType * FrameHeader) :
   HTTP2Error + FrameType * FrameHeader :=
   let (typ, header) := typfrm in
@@ -69,3 +73,5 @@ Definition checkFrameHeader (settings : Settings)
           else inl (ConnectionError FrameSizeError "payload length is 4 in window update frame")
         | _ => inr typfrm
         end.
+
+Solve All Obligations with repeat constructor; intro H0; inversion H0.

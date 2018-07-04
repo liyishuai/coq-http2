@@ -31,7 +31,7 @@ Definition streamid_to_string (E:bool) (sid:StreamId) : string :=
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 (* NOTE: header is the string between length and payload. *)
-Definition encodeFrameHeader (f:Frame) : string :=
+Program Definition encodeFrameHeader (f:Frame) : string :=
   let fh := frameHeader f in
   (* Length (24) *)
   let s_len := pack (binnat_to_bvector (payloadLength fh) 24) in
