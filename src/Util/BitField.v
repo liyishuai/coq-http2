@@ -13,15 +13,15 @@ Definition coerceBit (n m : nat) (b : Bit n) : Bit m :=
   | Bit1 => Bit1
   end.
 
-Fixpoint BVnth (m n : nat) (v : Bvector m) : bool :=
+Fixpoint BVnth {m : nat} (n : nat) (v : Bvector m) : bool :=
   match v, n with
   | [], _ => false
   | b :: _, O => b
-  | _ :: v, S n => BVnth _ n v
+  | _ :: v, S n => BVnth n v
   end.
 
 Definition toBit {m n : nat} (v : Bvector m) : Bit n :=
-  if BVnth m n v then Bit1 else Bit0.
+  if BVnth n v then Bit1 else Bit0.
 
 Fixpoint BVsingleton (m n : nat) : Bvector m :=
   match m, n with

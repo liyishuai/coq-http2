@@ -1,4 +1,4 @@
-From HTTP2 Require Import Types Util.BitField Util.ByteVector Util.BitString.
+From HTTP2 Require Import Types Util.BitField Util.ByteVector Util.BitVector.
 From Coq Require Import Bvector String BinNat List.
 Open Scope N_scope.
 Open Scope string_scope.

@@ -1,4 +1,4 @@
-From Coq Require Import List Bvector NArith String.
+From Coq Require Import Bvector FMaps NArith OrderedTypeEx String.
 From HTTP2 Require Import Util.BitField Util.ByteVector.
 Import ListNotations.
 Open Scope N_scope.
@@ -6,6 +6,9 @@ Open Scope type_scope.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.5.1.1 *)
 Definition StreamId := N.
+Definition isControl : StreamId -> bool := Neqb 0.
+Definition isRequest : StreamId -> bool := N.odd.
+Definition isResponse (n : StreamId) : bool := negb (n =? 0) && N.even n.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.5.3.2 *)
 Definition Weight := N.
@@ -33,8 +36,18 @@ Inductive  SettingKey   :=
 | SettingUnknown : SettingKeyId -> SettingKey.
 (* Extensions are permitted to use new settings. (Section 5.5) *)
 Definition Setting  := SettingKey * SettingValue.
+Definition Settings := SettingKey -> SettingValue.
 
-Definition fromSettingKeyId (id : SettingKeyId) : SettingKey :=
+Definition defaultSettings (key : SettingKey) : SettingValue :=
+  match key with
+  | SettingHeaderTableSize   =>  4096
+  | SettingEnablePush        =>     1
+  | SettingInitialWindowSize => 65535
+  | SettingMaxFrameSize      => 16384
+  | _                   => 4294967295
+  end.
+
+Coercion fromSettingKeyId (id : SettingKeyId) : SettingKey :=
   match id with
   | 1 => SettingHeaderTableSize
   | 2 => SettingEnablePush
@@ -117,6 +130,10 @@ Coercion toErrorCodeId (e:ErrorCode) : ErrorCodeId :=
   | (UnknownErrorCode w) => w
   end.
 
+Inductive HTTP2Error :=
+  ConnectionError : ErrorCode -> string   -> HTTP2Error
+| StreamError     : ErrorCode -> StreamId -> HTTP2Error.
+
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Definition FrameFlagsField  := Bvector 8.
 Inductive  FrameHeader :=
@@ -140,6 +157,25 @@ Inductive FrameType :=
 | ContinuationType              (* 0x9 *)
 | UnknownType : FrameTypeId -> FrameType.
 (* Extensions are permitted to define new frame types. (Section 5.5) *)
+
+Definition zeroFrameType (typ : FrameType) : bool :=
+  match typ with
+  | SettingsType => true
+  | PingType     => true
+  | GoAwayType   => true
+  | _            => false
+  end.
+
+Definition nonZeroFrameType (typ : FrameType) : bool :=
+  match typ with
+  | DataType         => true
+  | HeadersType      => true
+  | PriorityType     => true
+  | RSTStreamType    => true
+  | PushPromiseType  => true
+  | ContinuationType => true
+  | _                => false
+  end.
 
 Coercion fromFrameTypeId (id : FrameTypeId) : FrameType :=
   match id with
@@ -201,6 +237,12 @@ Inductive FrameFlags : FrameType -> Type :=
   : FrameFlags ContinuationType
 | UnknownFlags type : FrameFlags (UnknownType type)
 .
+
+Definition testEndStream  : FrameFlagsField -> bool := BVnth 0.
+Definition testAck        : FrameFlagsField -> bool := BVnth 0.
+Definition testEndHeaders : FrameFlagsField -> bool := BVnth 2.
+Definition testPadded     : FrameFlagsField -> bool := BVnth 3.
+Definition testPriority   : FrameFlagsField -> bool := BVnth 5.
 
 Definition fromFrameFlagsField type (fff : FrameFlagsField) :
   FrameFlags type :=
