@@ -1,5 +1,5 @@
 From HTTP2 Require Import Types Util.BitVector Util.ByteVector Util.VectorUtil.
-From Coq Require Import NArith.
+From Coq Require Import Ascii NArith Nat String.
 Open Scope bool_scope.
 Open Scope N_scope.
 
@@ -75,3 +75,24 @@ Program Definition checkFrameHeader (settings : Settings)
         end.
 
 Solve All Obligations with repeat constructor; intro H0; inversion H0.
+
+Open Scope nat_scope.
+
+(* Stronger constraints? *)
+Definition decodeWithPadding
+           (h : FrameHeader)
+           (s : string) :
+  HTTP2Error + string :=
+  let fff := flags h in
+  if testPadded fff
+  then
+    match s with
+    | "" =>
+      inl (ConnectionError FrameSizeError "empty payload")
+    | String a s' =>
+      let padlen := nat_of_ascii a in
+      if padlen <? length s
+      then inr (substring 0 padlen s')
+      else inl (ConnectionError ProtocolError "padding is not enough")
+    end
+  else inr s.
