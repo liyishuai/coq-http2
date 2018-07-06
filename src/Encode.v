@@ -1,22 +1,30 @@
 From HTTP2 Require Import Types Util.BitField Util.ByteVector Util.BitVector.
-From Coq Require Import Bvector String BinNat List.
+From Coq Require Import Bvector String BinNat List Ascii.
 Open Scope N_scope.
 Open Scope string_scope.
 
-(* Converts binary nat i to an n bit vector. *)
-Fixpoint binnat_to_bvector (i:N) (n:nat) : Bvector n :=
-  let val := N.testbit_nat i n in
+(* Converts binary nat i to an n bit vector in MSB. *)
+Fixpoint binnat_to_msb_bvector (i:N) (n:nat) : Bvector n :=
+  let val := N.testbit_nat i (pred n) in
   match n with
   | O => Bnil
-  | S n' => Bcons val n' (binnat_to_bvector i n')
+  | S n' => Bcons val n' (binnat_to_msb_bvector i n')
   end.
+
+Fixpoint pack_msb {n : nat} (v : Bvector n) : string :=
+  match v with
+  | (b0::b1::b2::b3::b4::b5::b6::b7::v')%vector =>
+    String (Ascii b7 b6 b5 b4 b3 b2 b1 b0) (pack_msb v')
+  | _ => ""
+  end.
+    
 
 Definition pad_len (p:option N) : string :=
   match p with
   | None => ""
   | Some n =>
     (* Pad Length? (8) *)
-    pack (binnat_to_bvector n 8)
+    pack_msb (binnat_to_msb_bvector n 8)
   end.
 
 Definition padding (p:option N) : string :=
@@ -27,23 +35,23 @@ Definition padding (p:option N) : string :=
   end.
 
 Definition streamid_to_string (E:bool) (sid:StreamId) : string :=
-  pack (Bcons E 31 (binnat_to_bvector sid 31)).
+  pack_msb (Bcons E 31 (binnat_to_msb_bvector sid 31)).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 (* NOTE: header is the string between length and payload. *)
 Program Definition encodeFrameHeader (f:Frame) : string :=
   let fh := frameHeader f in
   (* Length (24) *)
-  let s_len := pack (binnat_to_bvector (payloadLength fh) 24) in
+  let s_len := pack_msb (binnat_to_msb_bvector (payloadLength fh) 24) in
   (* Type (8) *)
-  let s_ft := pack (binnat_to_bvector (toFrameTypeId (frameType f)) 8) in
+  let s_ft := pack_msb (binnat_to_msb_bvector (toFrameTypeId (frameType f)) 8) in
   (* Flags (8) *)
-  let s_flgs := pack (flags fh) in
+  let s_flgs := pack_msb (flags fh) in
   (* R is a reserved 1-bit field, MUST remain unset when sending and MUST be
      ignored when receiving. *)
   (* Stream Identifier (31) *)
   let s_si := streamid_to_string false (streamId fh) in
-  s_ft ++ s_flgs ++ s_si.
+  s_len ++ s_ft ++ s_flgs ++ s_si.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.1 *)
 Definition buildData (p:option N) (s:string) :=
@@ -66,7 +74,7 @@ Definition buildHeaders (p:option N) (op:option Priority) (hbf:HeaderBlockFragme
     (* StreamDependency? (31) *)
     streamid_to_string (exclusive p) (streamDependency p) ++
     (* Weight? (8) *)
-    pack (binnat_to_bvector (weight p) 8)
+    pack_msb (binnat_to_msb_bvector (weight p) 8)
   end
     (* Header Block Fragment ( * ) *)
     ++ hbf ++
@@ -79,12 +87,12 @@ Definition buildPriority (p:Priority) :=
   (* StreamDependency? (31) *)
   streamid_to_string (exclusive p) (streamDependency p) ++
   (* Weight? (8) *)
-  pack (binnat_to_bvector (weight p) 8).
+  pack_msb (binnat_to_msb_bvector (weight p) 8).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.4 *)
 Definition buildRSTStream (e:ErrorCode) :=
   (* Error Code (32) *)
-  pack (binnat_to_bvector (toErrorCodeId e) 32).
+  pack_msb (binnat_to_msb_bvector (toErrorCodeId e) 32).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
 Fixpoint buildSettings (sets:list Setting) :=
@@ -92,9 +100,9 @@ Fixpoint buildSettings (sets:list Setting) :=
   | nil => ""
   | (sk, sv) :: tl =>
     (* Identifier (16) *)
-    pack (binnat_to_bvector (toSettingKeyId sk) 16)
+    pack_msb (binnat_to_msb_bvector (toSettingKeyId sk) 16)
     (* Value (32) *)
-    ++ pack (binnat_to_bvector sv 32) ++ buildSettings tl
+    ++ pack_msb (binnat_to_msb_bvector sv 32) ++ buildSettings tl
   end.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.6 *)
@@ -123,7 +131,7 @@ Definition buildGoAway (sid:StreamId) (e:ErrorCode) (s:string) :=
   (* Last-Stream-ID (31) *)
   streamid_to_string false sid ++
   (* Error Code (32) *)
-  pack (binnat_to_bvector (toErrorCodeId e) 32) ++
+  pack_msb (binnat_to_msb_bvector (toErrorCodeId e) 32) ++
   (* Additional Debug Data ( * ) *)
   s.
 
