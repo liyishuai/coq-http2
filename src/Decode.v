@@ -1,7 +1,21 @@
 From HTTP2 Require Import Types Util.BitVector Util.ByteVector Util.VectorUtil.
 From Coq Require Import Ascii NArith Nat String.
+From ExtLib Require Import Functor Monad.
+Import FunctorNotation.
+
 Open Scope bool_scope.
 Open Scope N_scope.
+Open Scope type_scope.
+
+Definition Parser T := HTTP2Error + T.
+Instance ParserMonad : Monad Parser :=
+  {| ret := @inr HTTP2Error;
+     bind t u pt tpu :=
+       match pt with
+       | inl e => inl e
+       | inr t => tpu t
+       end
+  |}.
 
 Program Definition decodeFrameHeader (v : ByteVector 9) : FrameType * FrameHeader :=
   let (vlength, v3) := splitAt 3 v in
@@ -22,7 +36,7 @@ Qed.
 
 Program Definition checkFrameHeader (settings : Settings)
            (typfrm : FrameType * FrameHeader) :
-  HTTP2Error + FrameType * FrameHeader :=
+  Parser (FrameType * FrameHeader) :=
   let (typ, header) := typfrm in
   let length := payloadLength header in
   let fff    := flags         header in
@@ -96,3 +110,9 @@ Definition decodeWithPadding
       else inl (ConnectionError ProtocolError "padding is not enough")
     end
   else inr s.
+
+Definition FramePayloadDecoder (frameType : FrameType) :=
+  FrameHeader -> string -> Parser (FramePayload frameType).
+
+Definition decodeDataFrame : FramePayloadDecoder DataType :=
+  fun h s => DataFrame <$> decodeWithPadding h s.

@@ -30,7 +30,8 @@ install:
 - eval $(opam config env)
 - opam config var root
 - ocamlc -v
-- opam install $COQ
+- opam repo add coq-released https://coq.inria.fr/opam/released
+- opam install $COQ coq-ext-lib
 - opam list
 script:
 - set -e
