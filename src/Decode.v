@@ -1,21 +1,14 @@
-From HTTP2 Require Import Types Util.BitVector Util.ByteVector Util.VectorUtil.
+From HTTP2 Require Import Types
+                          Util.BitVector
+                          Util.ByteVector
+                          Util.VectorUtil
+                          Util.OptionE.
 From Coq Require Import Ascii NArith Nat String.
-From ExtLib Require Import Functor Monad.
+From ExtLib Require Import Functor.
 Import FunctorNotation.
 
 Open Scope bool_scope.
 Open Scope N_scope.
-Open Scope type_scope.
-
-Definition OptionE T := HTTP2Error + T.
-Instance MonadOptionE : Monad OptionE :=
-  {| ret := @inr HTTP2Error;
-     bind _ _ ot f :=
-       match ot with
-       | inl e => inl e
-       | inr t => f t
-       end
-  |}.
 
 Program Definition decodeFrameHeader (v : ByteVector 9) : FrameType * FrameHeader :=
   let (vlength, v3) := splitAt 3 v in
