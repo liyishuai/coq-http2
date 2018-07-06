@@ -7,13 +7,13 @@ Open Scope bool_scope.
 Open Scope N_scope.
 Open Scope type_scope.
 
-Definition Parser T := HTTP2Error + T.
-Instance ParserMonad : Monad Parser :=
+Definition OptionE T := HTTP2Error + T.
+Instance MonadOptionE : Monad OptionE :=
   {| ret := @inr HTTP2Error;
-     bind t u pt tpu :=
-       match pt with
+     bind _ _ ot f :=
+       match ot with
        | inl e => inl e
-       | inr t => tpu t
+       | inr t => f t
        end
   |}.
 
@@ -36,7 +36,7 @@ Qed.
 
 Program Definition checkFrameHeader (settings : Settings)
            (typfrm : FrameType * FrameHeader) :
-  Parser (FrameType * FrameHeader) :=
+  OptionE (FrameType * FrameHeader) :=
   let (typ, header) := typfrm in
   let length := payloadLength header in
   let fff    := flags         header in
@@ -112,7 +112,7 @@ Definition decodeWithPadding
   else inr s.
 
 Definition FramePayloadDecoder (frameType : FrameType) :=
-  FrameHeader -> string -> Parser (FramePayload frameType).
+  FrameHeader -> string -> OptionE (FramePayload frameType).
 
 Definition decodeDataFrame : FramePayloadDecoder DataType :=
   fun h s => DataFrame <$> decodeWithPadding h s.
