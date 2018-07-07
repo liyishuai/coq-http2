@@ -104,8 +104,19 @@ Definition decodeWithPadding
     end
   else inr s.
 
+Close Scope nat_scope.
+
 Definition FramePayloadDecoder (frameType : FrameType) :=
   FrameHeader -> string -> OptionE (FramePayload frameType).
 
 Definition decodeDataFrame : FramePayloadDecoder DataType :=
   fun h s => DataFrame <$> decodeWithPadding h s.
+
+Definition priority (v : ByteVector 5) : Priority :=
+  let (v0, v4) := splitAt 4 v in
+  let (e, vid) := Vector_uncons (Bvector_of_ByteVector v0) in
+  let id := N_of_Bvector vid in
+  let weight := N_of_ByteVector v4 + 1 in
+  {| exclusive := e;
+     streamDependency := id;
+     weight := weight |}.
