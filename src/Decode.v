@@ -4,7 +4,7 @@ From HTTP2 Require Import Types
                           Util.VectorUtil
                           Util.OptionE.
 From Coq Require Import Ascii NArith Nat String.
-From ExtLib Require Import Functor.
+From ExtLib Require Import Functor Monad.
 Import FunctorNotation.
 
 Open Scope bool_scope.
@@ -29,7 +29,7 @@ Qed.
 
 Program Definition checkFrameHeader (settings : Settings)
            (typfrm : FrameType * FrameHeader) :
-  OptionE (FrameType * FrameHeader) :=
+  OptionE unit :=
   let (typ, header) := typfrm in
   let length := payloadLength header in
   let fff    := flags         header in
@@ -44,11 +44,24 @@ Program Definition checkFrameHeader (settings : Settings)
       then inl (ConnectionError ProtocolError "cannot used in non-zero stream")
       else
         match typ with
+        | HeadersType =>
+          if testPadded fff
+          then
+            if length <? 1
+            then inl (ConnectionError FrameSizeError "insufficient payload for Pad Length")
+            else
+              if testPriority fff && (length <? 6)
+              then inl (ConnectionError FrameSizeError "insufficient payload for Pad Length and priority fields")
+              else ret tt
+          else
+            if testPriority fff && (length <? 5)
+            then inl (ConnectionError FrameSizeError "insufficient payload for priority fields")
+            else ret tt
         | PriorityType =>
-          if length =? 5 then inr typfrm
+          if length =? 5 then ret tt
           else inl (StreamError FrameSizeError id)
         | RSTStreamType =>
-          if length =? 4 then inr typfrm
+          if length =? 4 then ret tt
           else inl (ConnectionError
                       FrameSizeError
                       "payload length is not 4 in rst stream frame")
@@ -56,7 +69,7 @@ Program Definition checkFrameHeader (settings : Settings)
           if length mod 6 =? 0 then
             if testAck fff && negb (length =? 0)
             then inl (ConnectionError FrameSizeError "payload length must be 0 if ack flag is set")
-            else inr typfrm
+            else ret tt
           else inl (ConnectionError FrameSizeError "payload length is not multiple of 6 in settings frame")
         | PushPromiseType =>
           (* checkme: https://hackage.haskell.org/package/http2-1.6.3/docs/src/Network-HTTP2-Decode.html#line-102 *)
@@ -64,21 +77,21 @@ Program Definition checkFrameHeader (settings : Settings)
           then inl (ConnectionError ProtocolError "push not enabled")
           else
             if isResponse id
-            then inr typfrm
+            then ret tt
             else inl (ConnectionError ProtocolError "push promise must be used with even stream identifier")
         | PingType =>
           if length =? 8
-          then inr typfrm
+          then ret tt
           else inl (ConnectionError FrameSizeError "payload length is 8 in ping frame")
         | GoAwayType =>
           if length <? 8
           then inl (ConnectionError FrameSizeError "goaway body must be 8 bytes or larger")
-          else inr typfrm
+          else ret tt
         | WindowUpdateType =>
           if length =? 4
-          then inr typfrm
+          then ret tt
           else inl (ConnectionError FrameSizeError "payload length is 4 in window update frame")
-        | _ => inr typfrm
+        | _ => ret tt
         end.
 
 Solve All Obligations with repeat constructor; intro H0; inversion H0.
