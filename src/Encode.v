@@ -17,7 +17,6 @@ Fixpoint pack_msb {n : nat} (v : Bvector n) : string :=
     String (Ascii b7 b6 b5 b4 b3 b2 b1 b0) (pack_msb v')
   | _ => ""
   end.
-    
 
 Definition pad_len (p:option N) : string :=
   match p with
@@ -38,7 +37,6 @@ Definition streamid_to_string (E:bool) (sid:StreamId) : string :=
   pack_msb (Bcons E 31 (binnat_to_msb_bvector sid 31)).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
-(* NOTE: header is the string between length and payload. *)
 Program Definition encodeFrameHeader (f:Frame) : string :=
   let fh := frameHeader f in
   (* Length (24) *)
