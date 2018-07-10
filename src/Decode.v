@@ -2,13 +2,15 @@ From HTTP2 Require Import Types
                           Util.BitVector
                           Util.ByteVector
                           Util.VectorUtil
+                          Util.StringUtil
                           Util.OptionE.
 From Coq Require Import Ascii NArith Nat String.
 From ExtLib Require Import Functor Monad.
-Import FunctorNotation.
+Import FunctorNotation MonadNotation.
 
 Open Scope bool_scope.
 Open Scope N_scope.
+Open Scope monad_scope.
 
 Program Definition decodeFrameHeader (v : ByteVector 9) : FrameType * FrameHeader :=
   let (vlength, v3) := splitAt 3 v in
@@ -43,20 +45,23 @@ Program Definition checkFrameHeader (settings : Settings)
       if zeroFrameType typ && negb (isControl id)
       then inl (ConnectionError ProtocolError "cannot used in non-zero stream")
       else
-        match typ with
-        | HeadersType =>
-          if testPadded fff
-          then
-            if length <? 1
+        let checkPadded :=
+            if testPadded fff && (length <? 1)
             then inl (ConnectionError FrameSizeError "insufficient payload for Pad Length")
+            else ret tt in
+        match typ with
+        | DataType => checkPadded
+        | HeadersType =>
+          checkPadded;;
+          if testPriority fff
+          then
+            if length <? 5
+            then inl (ConnectionError FrameSizeError "insufficient payload for priority fields")
             else
-              if testPriority fff && (length <? 6)
+              if testPadded fff && (length <? 6)
               then inl (ConnectionError FrameSizeError "insufficient payload for Pad Length and priority fields")
               else ret tt
-          else
-            if testPriority fff && (length <? 5)
-            then inl (ConnectionError FrameSizeError "insufficient payload for priority fields")
-            else ret tt
+          else ret tt
         | PriorityType =>
           if length =? 5 then ret tt
           else inl (StreamError FrameSizeError id)
@@ -77,7 +82,7 @@ Program Definition checkFrameHeader (settings : Settings)
           then inl (ConnectionError ProtocolError "push not enabled")
           else
             if isResponse id
-            then ret tt
+            then checkPadded
             else inl (ConnectionError ProtocolError "push promise must be used with even stream identifier")
         | PingType =>
           if length =? 8
@@ -133,3 +138,18 @@ Definition priority (v : ByteVector 5) : Priority :=
   {| exclusive := e;
      streamDependency := id;
      weight := weight |}.
+
+Program Definition decodeHeadersFrame : FramePayloadDecoder HeadersType :=
+  fun h s =>
+    let fff := flags h in
+    if testPriority fff
+    then
+      match String_splitAt 5 s with
+      | Some (s0, s5) =>
+        let p := priority (from_string s0) in
+        ret (HeadersFrame (Some p) s5)
+      | None => inl (ConnectionError ProtocolError "payload is not enough")
+      end
+    else ret (HeadersFrame None s).
+
+Solve Obligations with intros; eapply String_splitAt_lengthFst; eauto.
