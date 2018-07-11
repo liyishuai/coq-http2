@@ -36,11 +36,6 @@ Fixpoint ByteVector_of_N {m : nat} (n:N) : ByteVector m :=
     cons ascii (ascii_of_N x) m' (ByteVector_of_N n)
   end.
 
-Lemma N_of_ByteVector_invl :
-  forall n (v : ByteVector n),
-    ByteVector_of_N (N_of_ByteVector v) = v.
-Proof.
-  Admitted.    
 
 Lemma ascii_upperbound' (a : ascii) : N_of_ascii a < 256.
 Proof with simpl; constructor.
@@ -77,4 +72,49 @@ Proof with simpl; auto.
       * rewrite N.mul_add_distr_r.
         apply N.add_lt_mono_l...
     + reflexivity.
+Qed.
+
+Lemma add_pow2 : forall n m x,
+      n < 2 ^ m -> (x * 2 ^ m + n) / 2 ^ m = x.
+Proof. (* N.div_small *)
+  Admitted.
+      
+
+Lemma ByteVector_of_N_upper : forall x m n,
+    @ByteVector_of_N n (x * 2 ^ (N.of_nat (n * 8)) + m) = @ByteVector_of_N n m.
+Proof.
+  intros. generalize dependent x. induction n; auto. intros.
+  simpl.
+  assert (N.pos
+          (2
+           ^ Pos.succ
+               (Pos.succ
+                  (Pos.succ
+                     (Pos.succ
+                        (Pos.succ
+                           (Pos.succ
+                              (Pos.succ (Pos.of_succ_nat (n * 8))))))))) = 2 ^ (N.of_nat (8 + n * 8))).
+  auto. repeat rewrite H; clear H.
+  repeat rewrite <- Nshiftr_equiv_nat.
+  repeat rewrite N.shiftr_div_pow2.
+  repeat rewrite Nat2N.inj_add.
+  repeat rewrite N.pow_add_r.
+  rewrite N.mul_assoc. rewrite IHn.
+  Admitted.
+
+
+  
+Lemma ByteVector_of_N_embedding :
+  forall n (v : ByteVector n),
+    ByteVector_of_N (N_of_ByteVector v) = v.
+Proof.
+  intros. induction v; auto; simpl.
+  pose proof ByteVector_upperbound n v.
+  repeat rewrite <- Nshiftl_equiv_nat in *.
+  repeat rewrite <- Nshiftr_equiv_nat.
+  repeat rewrite N.shiftl_mul_pow2 in *.
+  repeat rewrite N.shiftr_div_pow2.
+  rewrite N.mul_1_l in H.
+  rewrite add_pow2; auto. rewrite ascii_N_embedding.
+  rewrite ByteVector_of_N_upper. rewrite IHv; auto.
 Qed.
