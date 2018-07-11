@@ -153,3 +153,12 @@ Program Definition decodeHeadersFrame : FramePayloadDecoder HeadersType :=
     else ret (HeadersFrame None s).
 
 Solve Obligations with intros; eapply String_splitAt_lengthFst; eauto.
+
+Program Definition decodePriorityFrame : FramePayloadDecoder PriorityType :=
+  fun h s =>
+    match length s with
+    | 5%nat =>
+      let p := priority (from_string s) in
+      ret (PriorityFrame p)
+    | _ => inl (ConnectionError ProtocolError "incorrect payload length")
+    end.
