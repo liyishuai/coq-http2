@@ -1,29 +1,15 @@
-From HTTP2 Require Import Types Util.BitField Util.ByteVector Util.BitVector.
+From HTTP2 Require Import Types.
+From HTTP2.Util Require Import BitField ByteVector BitVector VectorUtil.
 From Coq Require Import Bvector String BinNat List Ascii.
 Open Scope N_scope.
 Open Scope string_scope.
-
-(* Converts binary nat i to an n bit vector in MSB. *)
-Fixpoint binnat_to_msb_bvector (i:N) (n:nat) : Bvector n :=
-  let val := N.testbit_nat i (pred n) in
-  match n with
-  | O => Bnil
-  | S n' => Bcons val n' (binnat_to_msb_bvector i n')
-  end.
-
-Fixpoint pack_msb {n : nat} (v : Bvector n) : string :=
-  match v with
-  | (b0::b1::b2::b3::b4::b5::b6::b7::v')%vector =>
-    String (Ascii b7 b6 b5 b4 b3 b2 b1 b0) (pack_msb v')
-  | _ => ""
-  end.
 
 Definition pad_len (p:option N) : string :=
   match p with
   | None => ""
   | Some n =>
     (* Pad Length? (8) *)
-    pack_msb (binnat_to_msb_bvector n 8)
+    to_string (@ByteVector_of_N 1 n)
   end.
 
 Definition padding (p:option N) : string :=
@@ -34,17 +20,21 @@ Definition padding (p:option N) : string :=
   end.
 
 Definition streamid_to_string (E:bool) (sid:StreamId) : string :=
-  pack_msb (Bcons E 31 (binnat_to_msb_bvector sid 31)).
+  to_string (
+      match Vector_uncons (@ByteVector_of_N 4 sid) with
+      | (Ascii b0 b1 b2 b3 b4 b5 b6 _, v) =>
+        Vector.cons ascii (Ascii b0 b1 b2 b3 b4 b5 b6 E) 3 v
+      end).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Program Definition encodeFrameHeader (f:Frame) : string :=
   let fh := frameHeader f in
   (* Length (24) *)
-  let s_len := pack_msb (binnat_to_msb_bvector (payloadLength fh) 24) in
+  let s_len := to_string (@ByteVector_of_N 3 (payloadLength fh)) in
   (* Type (8) *)
-  let s_ft := pack_msb (binnat_to_msb_bvector (toFrameTypeId (frameType f)) 8) in
+  let s_ft := to_string (@ByteVector_of_N 1 (toFrameTypeId (frameType f))) in
   (* Flags (8) *)
-  let s_flgs := pack_msb (flags fh) in
+  let s_flgs := pack (flags fh) in
   (* R is a reserved 1-bit field, MUST remain unset when sending and MUST be
      ignored when receiving. *)
   (* Stream Identifier (31) *)
@@ -72,7 +62,7 @@ Definition buildHeaders (p:option N) (op:option Priority) (hbf:HeaderBlockFragme
     (* StreamDependency? (31) *)
     streamid_to_string (exclusive p) (streamDependency p) ++
     (* Weight? (8) *)
-    pack_msb (binnat_to_msb_bvector (weight p) 8)
+    to_string (@ByteVector_of_N 1 (weight p) )
   end
     (* Header Block Fragment ( * ) *)
     ++ hbf ++
@@ -85,12 +75,12 @@ Definition buildPriority (p:Priority) :=
   (* StreamDependency? (31) *)
   streamid_to_string (exclusive p) (streamDependency p) ++
   (* Weight? (8) *)
-  pack_msb (binnat_to_msb_bvector (weight p) 8).
+  to_string (@ByteVector_of_N 1 (weight p)).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.4 *)
 Definition buildRSTStream (e:ErrorCode) :=
   (* Error Code (32) *)
-  pack_msb (binnat_to_msb_bvector (toErrorCodeId e) 32).
+  to_string (@ByteVector_of_N 4 (toErrorCodeId e)).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
 Fixpoint buildSettings (sets:list Setting) :=
@@ -98,9 +88,9 @@ Fixpoint buildSettings (sets:list Setting) :=
   | nil => ""
   | (sk, sv) :: tl =>
     (* Identifier (16) *)
-    pack_msb (binnat_to_msb_bvector (toSettingKeyId sk) 16)
+    to_string (@ByteVector_of_N 2 (toSettingKeyId sk))
     (* Value (32) *)
-    ++ pack_msb (binnat_to_msb_bvector sv 32) ++ buildSettings tl
+    ++ to_string (@ByteVector_of_N 4 sv) ++ buildSettings tl
   end.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.6 *)
@@ -129,7 +119,7 @@ Definition buildGoAway (sid:StreamId) (e:ErrorCode) (s:string) :=
   (* Last-Stream-ID (31) *)
   streamid_to_string false sid ++
   (* Error Code (32) *)
-  pack_msb (binnat_to_msb_bvector (toErrorCodeId e) 32) ++
+  to_string (@ByteVector_of_N 4 (toErrorCodeId e)) ++
   (* Additional Debug Data ( * ) *)
   s.
 

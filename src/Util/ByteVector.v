@@ -28,6 +28,20 @@ Fixpoint N_of_ByteVector {n : nat} (v : ByteVector n) : N :=
     end
   end.
 
+Fixpoint ByteVector_of_N {m : nat} (n:N) : ByteVector m :=
+  match m with
+  | O => ByteNil
+  | S m' =>
+    let x := N.shiftr_nat n (m' * 8) in
+    cons ascii (ascii_of_N x) m' (ByteVector_of_N n)
+  end.
+
+Lemma N_of_ByteVector_invl :
+  forall n (v : ByteVector n),
+    ByteVector_of_N (N_of_ByteVector v) = v.
+Proof.
+  Admitted.    
+
 Lemma ascii_upperbound' (a : ascii) : N_of_ascii a < 256.
 Proof with simpl; constructor.
   destruct a as [b0 b1 b2 b3 b4 b5 b6 b7].
