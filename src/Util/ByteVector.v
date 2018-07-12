@@ -88,8 +88,19 @@ Proof.
   apply pow_lower; discriminate. 
 Qed.
 
-Lemma ascii_mod_256 : forall n, ascii_of_N n = ascii_of_N (N.modulo n 256).
+Lemma pos_mod_1 : forall p n,
+    N.pos (xI p) mod (2 ^ n) = N.pos p mod (2 ^ (n - 1)) + 2 ^ (n - 1).
 Proof. Admitted.
+
+Lemma pos_mod_0 : forall p n,
+    N.pos (xO p) mod (2 ^ n) = N.pos p mod (2 ^ (n - 1)).
+Proof. Admitted.
+
+Lemma ascii_mod_256 : forall n, ascii_of_N n = ascii_of_N (N.modulo n 256).
+Proof.
+  intros. unfold ascii_of_N. destruct n; auto.
+  assert (256 = 2^8); auto. rewrite H.
+  destruct p; try destruct p; try destruct p; try destruct p; try destruct p; try destruct p; try destruct p; try destruct p; auto; admit. Admitted.
 
 Lemma ByteVector_of_N_upper : forall x m n,
     @ByteVector_of_N n (x * 2 ^ (N.of_nat (n * 8)) + m) = @ByteVector_of_N n m.
