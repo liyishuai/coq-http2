@@ -74,11 +74,22 @@ Proof with simpl; auto.
     + reflexivity.
 Qed.
 
+Lemma pow_lower : forall n m, n <> 0 -> n ^ m <> 0.
+Proof.
+  intros. destruct m. simpl; discriminate.   
+  apply (N.pow_nonzero n (N.pos p)) in H; auto.
+Qed.
+  
 Lemma add_pow2 : forall n m x,
       n < 2 ^ m -> (x * 2 ^ m + n) / 2 ^ m = x.
-Proof. (* N.div_small *)
-  Admitted.
-      
+Proof.
+  intros. rewrite N.div_add_l. 
+  rewrite N.div_small; auto. rewrite N.add_0_r; auto.
+  apply pow_lower; discriminate. 
+Qed.
+
+Lemma ascii_mod_256 : forall n, ascii_of_N n = ascii_of_N (N.modulo n 256).
+Proof. Admitted.
 
 Lemma ByteVector_of_N_upper : forall x m n,
     @ByteVector_of_N n (x * 2 ^ (N.of_nat (n * 8)) + m) = @ByteVector_of_N n m.
@@ -86,8 +97,7 @@ Proof.
   intros. generalize dependent x. induction n; auto. intros.
   simpl.
   assert (N.pos
-          (2
-           ^ Pos.succ
+          (2 ^ Pos.succ
                (Pos.succ
                   (Pos.succ
                      (Pos.succ
@@ -100,9 +110,17 @@ Proof.
   repeat rewrite Nat2N.inj_add.
   repeat rewrite N.pow_add_r.
   rewrite N.mul_assoc. rewrite IHn.
-  Admitted.
-
-
+  rewrite ascii_mod_256. 
+  assert ((((x * 2 ^ N.of_nat 8 * 2 ^ N.of_nat (n * 8) + m) /
+      2 ^ N.of_nat (n * 8)) mod 256) = (m / 2 ^ N.of_nat (n * 8)) mod 256).
+  { rewrite N.div_add_l. rewrite <- N.add_mod_idemp_l; try discriminate.
+    assert ((x * 2 ^ N.of_nat 8) mod 256 = 0).
+    { assert (2 ^ N.of_nat 8 = 256); auto.
+      rewrite H; clear H. rewrite N.mod_mul; auto; discriminate. }
+    rewrite H. rewrite N.add_0_l; auto.
+    apply pow_lower; discriminate. }
+  rewrite H. rewrite <- ascii_mod_256; auto.
+Qed.                       
   
 Lemma ByteVector_of_N_embedding :
   forall n (v : ByteVector n),
