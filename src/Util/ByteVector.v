@@ -96,12 +96,41 @@ Lemma pos_mod_0 : forall p n,
     N.pos (xO p) mod (2 ^ n) = N.pos p mod (2 ^ (n - 1)).
 Proof. Admitted.
 
+
+Lemma pos_shiftr_1 : forall p,
+    N.shiftr (N.pos (xI p)) 1 = N.pos p.
+Proof.
+  trivial. Qed.
+
+Lemma pos_shiftr_0 : forall p,
+    N.shiftr (N.pos (xO p)) 1 = N.pos p.
+Proof.
+  trivial. Qed.
+
+Lemma shiftr_succ : forall n m,
+    N.shiftr n (N.succ m) = N.shiftr (N.shiftr n m) 1.
+Proof.
+  intros.
+  rewrite <- N.add_1_r. rewrite N.shiftr_shiftr. auto.
+Qed.
+
 Lemma ascii_mod_256 : forall n, ascii_of_N n = ascii_of_N (N.modulo n 256).
 Proof.
   intros. unfold ascii_of_N. destruct n; auto.
-  assert (256 = 2^8); auto. rewrite H.
-  destruct p; try destruct p; try destruct p; try destruct p; try destruct p; try destruct p; try destruct p; try destruct p; auto; admit. Admitted.
-
+  assert (256 = 2^8); auto. rewrite H.  
+  destruct p; try destruct p; try destruct p; try destruct p; try destruct p;
+    try destruct p; try destruct p; try destruct p; auto.
+  - rewrite N.mod_eq. rewrite <- N.shiftr_div_pow2. 
+    assert (8 = N.succ (N.succ (N.succ (N.succ (N.succ (N.succ (N.succ (N.succ 0))))))));
+      auto. rewrite H0. repeat rewrite N.shiftr_shiftr. repeat rewrite shiftr_succ.
+    rewrite N.shiftr_0_r. repeat rewrite pos_shiftr_1. rewrite <- H0. 
+    cut (N.pos p~1~1~1~1~1~1~1~1 - 2 ^ 8 * N.pos p =
+            255).
+    + intros. rewrite H1. reflexivity.
+    + apply (Pos.peano_ind (fun p => N.pos p~1~1~1~1~1~1~1~1 - 2 ^ 8 * N.pos p = 255));
+        auto; intros. 
+    Admitted.
+      
 Lemma ByteVector_of_N_upper : forall x m n,
     @ByteVector_of_N n (x * 2 ^ (N.of_nat (n * 8)) + m) = @ByteVector_of_N n m.
 Proof.
@@ -114,8 +143,8 @@ Proof.
                      (Pos.succ
                         (Pos.succ
                            (Pos.succ
-                              (Pos.succ (Pos.of_succ_nat (n * 8))))))))) = 2 ^ (N.of_nat (8 + n * 8))).
-  auto. repeat rewrite H; clear H.
+                              (Pos.succ (Pos.of_succ_nat (n * 8))))))))) = 2 ^ (N.of_nat (8 + n * 8)));
+    auto; repeat rewrite H; clear H.
   repeat rewrite <- Nshiftr_equiv_nat.
   repeat rewrite N.shiftr_div_pow2.
   repeat rewrite Nat2N.inj_add.
