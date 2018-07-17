@@ -1,15 +1,17 @@
 From HTTP2 Require Import Types.
 From HTTP2.Util Require Import BitField ByteVector BitVector VectorUtil.
-From Coq Require Import Bvector String BinNat List Ascii.
+From Coq Require Import Basics Bvector String BinNat List Ascii Vector.
+
 Open Scope N_scope.
 Open Scope string_scope.
+Open Scope program_scope.
 
 Definition pad_len (p:option N) : string :=
   match p with
   | None => ""
   | Some n =>
     (* Pad Length? (8) *)
-    to_string (@ByteVector_of_N 1 n)
+    to_string (ByteVector_of_N 1 n)
   end.
 
 Definition padding (p:option N) : string :=
@@ -19,27 +21,28 @@ Definition padding (p:option N) : string :=
     N.peano_rect (fun _ => string) "" (fun n' s => String Ascii.zero s) n
   end.
 
-Definition streamid_to_string (E:bool) (sid:StreamId) : string :=
-  to_string (
-      match Vector_uncons (@ByteVector_of_N 4 sid) with
-      | (Ascii b0 b1 b2 b3 b4 b5 b6 _, v) =>
-        Vector.cons ascii (Ascii b0 b1 b2 b3 b4 b5 b6 E) 3 v
-      end).
+Definition streamid_to_vector (E:bool) (sid:StreamId) : ByteVector 4 :=
+  match Vector_uncons (ByteVector_of_N 4 sid) with
+  | (Ascii b0 b1 b2 b3 b4 b5 b6 _, v) =>
+    Vector.cons ascii (Ascii b0 b1 b2 b3 b4 b5 b6 E) 3 v
+  end.
+
+Definition streamid_to_string (E:bool) := to_string ∘ streamid_to_vector E.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
-Program Definition encodeFrameHeader (f:Frame) : string :=
+Program Definition encodeFrameHeader (f:Frame) : ByteVector 9 :=
   let fh := frameHeader f in
   (* Length (24) *)
-  let s_len := to_string (@ByteVector_of_N 3 (payloadLength fh)) in
+  let v_len := ByteVector_of_N 3 (payloadLength fh) in
   (* Type (8) *)
-  let s_ft := to_string (@ByteVector_of_N 1 (toFrameTypeId (frameType f))) in
+  let v_ft := ByteVector_of_N 1 (toFrameTypeId (frameType f)) in
   (* Flags (8) *)
-  let s_flgs := pack (flags fh) in
+  let v_flgs := @ByteVector_of_Bvector 1 (flags fh) in
   (* R is a reserved 1-bit field, MUST remain unset when sending and MUST be
      ignored when receiving. *)
   (* Stream Identifier (31) *)
-  let s_si := streamid_to_string false (streamId fh) in
-  s_len ++ s_ft ++ s_flgs ++ s_si.
+  let v_si := streamid_to_vector false (streamId fh) in
+  (append v_len (append v_ft (append v_flgs v_si))).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.1 *)
 Definition buildData (p:option N) (s:string) :=
@@ -85,7 +88,7 @@ Definition buildRSTStream (e:ErrorCode) :=
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
 Fixpoint buildSettings (sets:list Setting) :=
   match sets with
-  | nil => ""
+  | List.nil => ""
   | (sk, sv) :: tl =>
     (* Identifier (16) *)
     to_string (@ByteVector_of_N 2 (toSettingKeyId sk))
@@ -151,4 +154,4 @@ Definition encodePayload (padding:option N) (f:Frame) : string :=
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Definition encodeFrame (padding:option N) (f:Frame) : string :=
-  encodeFrameHeader f ++ encodePayload padding f.
+  to_string (encodeFrameHeader f) ++ encodePayload padding f.
