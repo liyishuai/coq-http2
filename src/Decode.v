@@ -1,9 +1,11 @@
-From HTTP2 Require Import Types
-                          Util.BitVector
-                          Util.ByteVector
-                          Util.VectorUtil
-                          Util.StringUtil
-                          Util.OptionE.
+From HTTP2 Require Import
+     Encode
+     Types
+     Util.BitVector
+     Util.ByteVector
+     Util.OptionE
+     Util.VectorUtil
+     Util.StringUtil.
 From Coq Require Import Ascii NArith Nat String.
 From ExtLib Require Import Functor Monad.
 Import FunctorNotation MonadNotation.
@@ -28,6 +30,10 @@ Program Definition decodeFrameHeader (v : ByteVector 9) : FrameType * FrameHeade
 Obligation 1.
 apply ByteVector_upperbound.
 Qed.
+
+Lemma codecFrameHeader (ft : FrameType) (fh : FrameHeader) :
+  decodeFrameHeader (encodeFrameHeader ft fh) = (ft, fh).
+Admitted.
 
 Program Definition checkFrameHeader (settings : Settings)
            (typfrm : FrameType * FrameHeader) :

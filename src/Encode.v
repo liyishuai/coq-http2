@@ -30,12 +30,11 @@ Definition streamid_to_vector (E:bool) (sid:StreamId) : ByteVector 4 :=
 Definition streamid_to_string (E:bool) := to_string ∘ streamid_to_vector E.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
-Program Definition encodeFrameHeader (f:Frame) : ByteVector 9 :=
-  let fh := frameHeader f in
+Program Definition encodeFrameHeader (ft: FrameType) (fh: FrameHeader) : ByteVector 9 :=
   (* Length (24) *)
   let v_len := ByteVector_of_N 3 (payloadLength fh) in
   (* Type (8) *)
-  let v_ft := ByteVector_of_N 1 (toFrameTypeId (frameType f)) in
+  let v_ft := ByteVector_of_N 1 (toFrameTypeId ft) in
   (* Flags (8) *)
   let v_flgs := @ByteVector_of_Bvector 1 (flags fh) in
   (* R is a reserved 1-bit field, MUST remain unset when sending and MUST be
@@ -154,4 +153,5 @@ Definition encodePayload (padding:option N) (f:Frame) : string :=
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Definition encodeFrame (padding:option N) (f:Frame) : string :=
-  to_string (encodeFrameHeader f) ++ encodePayload padding f.
+  to_string (encodeFrameHeader (frameType f) (frameHeader f)) ++
+            encodePayload padding f.
