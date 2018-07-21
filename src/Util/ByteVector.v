@@ -33,8 +33,7 @@ Fixpoint ByteVector_of_N (m : nat) (n:N) : ByteVector m :=
   | O => ByteNil
   | S m' =>
     let x := N.shiftr_nat n (m' * 8) in
-    let n' := N.land n (N.shiftl_nat 1 (m' * 8) - 1) in
-    cons ascii (ascii_of_N x) m' (ByteVector_of_N m' n')
+    cons ascii (ascii_of_N x) m' (ByteVector_of_N m' n)
   end.
 
 Lemma ascii_upperbound' (a : ascii) : N_of_ascii a < 256.
@@ -150,7 +149,6 @@ Proof.
   repeat rewrite Nat2N.inj_add.
   repeat rewrite N.pow_add_r.
   rewrite N.mul_assoc.
-(*
   rewrite IHn.
   rewrite ascii_mod_256.
   assert ((((x * 2 ^ N.of_nat 8 * 2 ^ N.of_nat (n * 8) + m) /
@@ -163,8 +161,6 @@ Proof.
     apply pow_lower; discriminate. }
   rewrite H. rewrite <- ascii_mod_256; auto.
 Qed.
- *)
-Admitted.
 
 Lemma ByteVector_of_N_embedding :
   forall n (v : ByteVector n),
@@ -178,8 +174,5 @@ Proof.
   repeat rewrite N.shiftr_div_pow2.
   rewrite N.mul_1_l in H.
   rewrite add_pow2; auto. rewrite ascii_N_embedding.
-(*
   rewrite ByteVector_of_N_upper. rewrite IHv; auto.
 Qed.
- *)
-Admitted.
