@@ -1,4 +1,6 @@
 -R src HTTP2
+src/HPACK/HPACKTypes.v
+src/HPACK/HPACKEncode.v
 src/Util/BitField.v
 src/Util/StringUtil.v
 src/Util/VectorUtil.v
