@@ -28,7 +28,9 @@ Definition delete {a} k (m:NMap a) := NM.remove k m.
 Definition member {a} k (m:NMap a) := NM.mem k m.
 Definition lookup {a} k (m:NMap a) := NM.find k m.
 Definition empty {a} := @NM.empty a.
- 
+
+(* https://tools.ietf.org/html/rfc7541#appendix-A *)
+(* https://tools.ietf.org/html/rfc7541#section-2.3.1 *)
 Definition static_table : Table :=
   fold_left (fun m '(i, v) => add i v m)
             [ (1, (":authority", ""));
