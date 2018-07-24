@@ -1,6 +1,6 @@
-From Coq Require Import Strings.String BinNat FSets.FMapAVL List Basics.
+From Coq Require Import Strings.String BinNat FSets.FMapAVL Lists.List Basics.
 Import ListNotations.
-Require Coq.Structures.OrderedTypeEx.
+Require Coq.Structures.OrderedTypeEx Program.Wf.
 Open Scope list_scope.
 Open Scope string_scope.
 Open Scope N_scope.
@@ -20,7 +20,7 @@ Definition HeaderField := (string * string)%type.
       index values.  This table is ordered, read-only, always
       accessible, and it may be shared amongst all encoding or decoding
       contexts. *)
-Definition Table := list (N * HeaderField).
+Definition Table := list HeaderField.
 
 (* Dynamic Tables are a pair of a maximum size and a table. The convention is
    that the table has size (as defined in 
@@ -57,89 +57,76 @@ Definition HeaderBlock := list HeaderFieldRepresentation.
 (* https://tools.ietf.org/html/rfc7541#appendix-A *)
 (* https://tools.ietf.org/html/rfc7541#section-2.3.1 *)
 Definition static_table : Table :=
-  [ (1, (":authority", ""));
-    (2, (":method", "GET"));
-    (3, (":method", "POST"));
-    (4, (":path", "/"));
-    (5, (":path", "/index.html"));
-    (6, (":scheme", "http"));
-    (7, (":scheme", "https"));
-    (8, (":status", "200"));
-    (9, (":status", "204"));
-    (10, (":status", "206"));
-    (11, (":status", "304"));
-    (12, (":status", "400"));
-    (13, (":status", "404"));
-    (14, (":status", "500"));
-    (15, ("accept-charset", ""));
-    (16, ("accept-encoding", "gzip, deflate"));
-    (17, ("accept-language", ""));
-    (18, ("accept-ranges", ""));
-    (19, ("accept", ""));
-    (20, ("access-control-allow-origin", ""));
-    (21, ("age", ""));
-    (22, ("allow", ""));
-    (23, ("authorization", ""));
-    (24, ("cache-control", ""));
-    (25, ("content-disposition", ""));
-    (26, ("content-encoding", ""));
-    (27, ("content-language", ""));
-    (28, ("content-length", ""));
-    (29, ("content-location", ""));
-    (30, ("content-range", ""));
-    (31, ("content-type", ""));
-    (32, ("cookie", ""));
-    (33, ("date", ""));
-    (34, ("etag", ""));
-    (35, ("expect", ""));
-    (36, ("expires", ""));
-    (37, ("from", ""));
-    (38, ("host", ""));
-    (39, ("if-match", ""));
-    (40, ("if-modified-since", ""));
-    (41, ("if-none-match", ""));
-    (42, ("if-range", ""));
-    (43, ("if-unmodified-since", ""));
-    (44, ("last-modified", ""));
-    (45, ("link", ""));
-    (46, ("location", ""));
-    (47, ("max-forwards", ""));
-    (48, ("proxy-authenticate", ""));
-    (49, ("proxy-authorization", ""));
-    (50, ("range", ""));
-    (51, ("referer", ""));
-    (52, ("refresh", ""));
-    (53, ("retry-after", ""));
-    (54, ("server", ""));
-    (55, ("set-cookie", ""));
-    (56, ("strict-transport-security", ""));
-    (57, ("transfer-encoding", ""));
-    (58, ("user-agent", ""));
-    (59, ("vary", ""));
-    (60, ("via", ""));
-    (61, ("www-authenticate", ""))].
+  [ (":authority", "");
+    (":method", "GET");
+    (":method", "POST");
+    (":path", "/");
+    (":path", "/index.html");
+    (":scheme", "http");
+    (":scheme", "https");
+    (":status", "200");
+    (":status", "204");
+    (":status", "206");
+    (":status", "304");
+    (":status", "400");
+    (":status", "404");
+    (":status", "500");
+    ("accept-charset", "");
+    ("accept-encoding", "gzip, deflate");
+    ("accept-language", "");
+    ("accept-ranges", "");
+    ("accept", "");
+    ("access-control-allow-origin", "");
+    ("age", "");
+    ("allow", "");
+    ("authorization", "");
+    ("cache-control", "");
+    ("content-disposition", "");
+    ("content-encoding", "");
+    ("content-language", "");
+    ("content-length", "");
+    ("content-location", "");
+    ("content-range", "");
+    ("content-type", "");
+    ("cookie", "");
+    ("date", "");
+    ("etag", "");
+    ("expect", "");
+    ("expires", "");
+    ("from", "");
+    ("host", "");
+    ("if-match", "");
+    ("if-modified-since", "");
+    ("if-none-match", "");
+    ("if-range", "");
+    ("if-unmodified-since", "");
+    ("last-modified", "");
+    ("link", "");
+    ("location", "");
+    ("max-forwards", "");
+    ("proxy-authenticate", "");
+    ("proxy-authorization", "");
+    ("range", "");
+    ("referer", "");
+    ("refresh", "");
+    ("retry-after", "");
+    ("server", "");
+    ("set-cookie", "");
+    ("strict-transport-security", "");
+    ("transfer-encoding", "");
+    ("user-agent", "");
+    ("vary", "");
+    ("via", "");
+    ("www-authenticate", "")].
 
 (* https://tools.ietf.org/html/rfc7541#section-2.3.3 *)
-Definition snd_opt {A} {B} (p:option (A * B)) : option B :=
-  match p with
-  | Some p => Some (snd p)
-  | _ => None
-  end.
-
 Definition index_into_tables (i:N) (dynamic_table:DTable) : option HeaderField :=
-  let assoc j t := snd_opt (find (fun '(k, _) => N.eqb j k) t) in
   if i =? 0 then None
-  else if i <=? N.of_nat (length static_table) then assoc i static_table
-       else assoc (i - (N.of_nat (length static_table))) (snd dynamic_table).
+  else if i <=? N.of_nat (length static_table) then nth_error static_table (N.to_nat i)
+       else nth_error (snd dynamic_table) (N.to_nat i - (length static_table + 1))%nat.
 
 (* https://tools.ietf.org/html/rfc7541#section-2.3.2 *)
 (* https://tools.ietf.org/html/rfc7541#section-2.3.3 *)
-Definition fst_opt {A} {B} (p:option (A * B)) : option A :=
-  match p with
-  | Some p => Some (fst p)
-  | _ => None
-  end.
-
 Definition eqb_hf (s1 s2:HeaderField) : bool :=
   match s1, s2 with
   | (fs1, ss1), (fs2, ss2) => andb (if string_dec fs1 fs2 then true else false)
@@ -147,7 +134,16 @@ Definition eqb_hf (s1 s2:HeaderField) : bool :=
   end.
 
 Definition find_dtable (h:HeaderField) (dynamic_table:DTable) : option N :=
-  @fst_opt N HeaderField (find (fun '(_, s) => eqb_hf s h) (snd dynamic_table)).
+  let fix loop i l :=
+      match l with
+      | [] => None
+      | a :: tl =>
+        if eqb_hf h a then Some i else loop (N.succ i) (tl)
+      end in
+  match loop 0 (snd dynamic_table) with
+  | None => None
+  | Some n => Some (n + (N.of_nat (length static_table)) + 1)
+  end.
 
 (* The size of an entry is the sum of its name's length in octets (as defined in
    https://tools.ietf.org/html/rfc7541#section-5.2), its value's length in 
@@ -157,4 +153,41 @@ Definition size_hf (hf:HeaderField) : N :=
 
 (* https://tools.ietf.org/html/rfc7541#section-4.1 *)
 Definition size_dtable (dynamic_table:DTable) : N :=
-  fold_left N.add (map (size_hf ∘ snd) (snd dynamic_table)) 0. 
+  fold_left N.add (map size_hf (snd dynamic_table)) 0.
+
+(* https://tools.ietf.org/html/rfc7541#section-4.3 *)
+(* https://tools.ietf.org/html/rfc7541#section-4.4 *)
+Program Fixpoint dtable_entry_eviction (dynamic_table:DTable)
+        {measure (length (snd dynamic_table))}: DTable :=
+  match size_dtable dynamic_table <=? fst dynamic_table with
+  | true => dynamic_table
+  | false => dtable_entry_eviction (fst dynamic_table,
+                                   removelast (snd dynamic_table))
+  end.
+Obligation 1.
+  symmetry in Heq_anonymous; rewrite N.leb_gt in Heq_anonymous.
+  specialize exists_last with (l:=snd dynamic_table); intros exists_last.
+  destruct dynamic_table; destruct t.
+  - simpl in *. compute in Heq_anonymous; destruct n; inversion Heq_anonymous.
+  - cut (snd (n, h :: t) <> []); intros; try solve [simpl; congruence].
+    apply exists_last in H. inversion H. inversion H0. rewrite H1.
+    rewrite removelast_app; try congruence. simpl. repeat rewrite app_length.
+    simpl. rewrite PeanoNat.Nat.add_0_r. rewrite PeanoNat.Nat.add_1_r.
+    apply PeanoNat.Nat.lt_succ_diag_r.
+Defined.
+
+Definition change_dtable_size (i:N) (dynamic_table:DTable) : DTable :=
+  dtable_entry_eviction (i, snd dynamic_table).
+
+Definition cons_dtable (entry:HeaderField) (dynamic_table:DTable) : DTable :=
+  (fst dynamic_table, entry :: snd dynamic_table).
+
+Definition add_dtable_entry (dynamic_table:DTable) (entry:HeaderField)
+  : DTable :=
+  (* First, evict entries so that the table can add the entry (removes elements
+     if table is non empty and adding element pushes table over max size), add
+     entry to table, and finally evict entries if table is now too large 
+     (removes just entry added only when entry is larger than max table size) *)
+  let evict1 := change_dtable_size (fst dynamic_table - size_hf entry)
+                                   dynamic_table in
+  (change_dtable_size (fst dynamic_table)) (cons_dtable entry evict1).
