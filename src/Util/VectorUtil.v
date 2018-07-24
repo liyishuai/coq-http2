@@ -1,4 +1,6 @@
-From Coq Require Import Vector.
+Set Warnings "-local-declaration,-scope".
+
+From Coq Require Import Equality Vector.
 Import VectorNotations.
 
 (* Deconstruct a non-empty vector. *)
@@ -14,7 +16,7 @@ Definition Vector_uncons {A} {n : nat} (v : Vector.t A (S n)) :
   | x :: xs => (x, xs)
   end.
 
-Fixpoint splitAt {A : Type} (l : nat) {r : nat} :
+Fixpoint splitAt {A} (l : nat) {r : nat} :
   Vector.t A (l + r) -> Vector.t A l * Vector.t A r :=
   match l with
   | 0 => fun v => ([], v)
@@ -23,3 +25,12 @@ Fixpoint splitAt {A : Type} (l : nat) {r : nat} :
     let (v1, v2) := splitAt l' v' in
     (b::v1, v2)
   end.
+
+Theorem split_append {A} (l : nat) : forall {r : nat} (v : Vector.t A l) (w : Vector.t A r),
+    splitAt l (append v w) = (v, w).
+Proof with simpl; auto.
+  induction l; intros...
+  - dependent destruction v...
+  - dependent destruction v...
+    rewrite IHl...
+Qed.

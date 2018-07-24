@@ -8,6 +8,7 @@ src/Util/VectorUtil.v
 src/Util/BitVector.v
 src/Util/ByteVector.v
 src/Util/OptionE.v
+src/Equiv.v
 src/Types.v
 src/Encode.v
 src/Decode.v

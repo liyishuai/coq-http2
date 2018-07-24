@@ -1,4 +1,5 @@
 From HTTP2 Require Import
+     Equiv
      Encode
      Types
      Util.BitVector
@@ -32,8 +33,14 @@ apply ByteVector_upperbound.
 Qed.
 
 Lemma codecFrameHeader (ft : FrameType) (fh : FrameHeader) :
-  decodeFrameHeader (encodeFrameHeader ft fh) = (ft, fh).
-Admitted.
+  decodeFrameHeader (encodeFrameHeader ft fh) === (ft, fh).
+Proof.
+  unfold encodeFrameHeader.
+  unfold decodeFrameHeader.
+  repeat rewrite split_append.
+  constructor.
+  - simpl; auto.
+Abort.
 
 Program Definition checkFrameHeader (settings : Settings)
            (typfrm : FrameType * FrameHeader) :

@@ -1,5 +1,5 @@
 From Coq Require Import Bvector FMaps NArith OrderedTypeEx String.
-From HTTP2 Require Import Util.BitField Util.ByteVector.
+From HTTP2 Require Import Equiv Util.BitField Util.ByteVector.
 Import ListNotations.
 Open Scope N_scope.
 Open Scope type_scope.
@@ -69,6 +69,9 @@ Coercion toSettingKeyId (key : SettingKey) : SettingKeyId :=
   | SettingUnknown id           => id
   end.
 
+Instance EquivSettingKey : Equiv SettingKey :=
+  { equiv := eq_equiv toSettingKeyId }.
+
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.9 *)
 Definition WindowSize := N.
 
@@ -129,6 +132,9 @@ Coercion toErrorCodeId (e:ErrorCode) : ErrorCodeId :=
   | HTTP11Required       => 13
   | (UnknownErrorCode w) => w
   end.
+
+Instance EquivErrorCode : Equiv ErrorCode :=
+  { equiv := eq_equiv toErrorCodeId }.
 
 Inductive HTTP2Error :=
   ConnectionError : ErrorCode -> string   -> HTTP2Error
@@ -207,6 +213,9 @@ Coercion toFrameTypeId (type : FrameType) : FrameTypeId :=
   | UnknownType id   => id
   end.
 
+Instance EquivFrameType : Equiv FrameType :=
+  { equiv := eq_equiv toFrameTypeId }.
+
 Inductive FrameFlags : FrameType -> Type :=
 | DataFlags
     (END_STREAM : Bit 0)
@@ -278,6 +287,9 @@ Definition toFrameFlagsField type (ff : FrameFlags type) :
     | GoAwayFlags | WindowUpdateFlags
     | UnknownFlags _ => []
     end%list.
+
+Instance EquivFrameFlags {typ} : Equiv (FrameFlags typ) :=
+  { equiv := eq_equiv (toFrameFlagsField typ) }.
 
 Inductive  FramePayload : FrameType -> Type :=
   DataFrame         : string                                -> FramePayload DataType
