@@ -85,7 +85,7 @@ Definition buildRSTStream (e:ErrorCode) :=
   to_string (@ByteVector_of_N 4 (toErrorCodeId e)).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
-Fixpoint buildSettings (sets:list Setting) :=
+Program Fixpoint buildSettings (sets:list Setting) :=
   match sets with
   | List.nil => ""
   | (sk, sv) :: tl =>
