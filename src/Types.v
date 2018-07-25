@@ -1,4 +1,4 @@
-From Coq Require Import Bvector FMaps NArith OrderedTypeEx String.
+From Coq Require Import Bvector FMaps NArith OrderedTypeEx String micromega.Psatz.
 From HTTP2 Require Import Equiv Util.BitField Util.ByteVector.
 Import ListNotations.
 Open Scope N_scope.
@@ -25,7 +25,8 @@ Inductive Priority :=
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
 Definition SettingValue := N.
-Definition SettingKeyId := N.
+Definition SettingKeyId := {n:N | n >= 0 /\ n <= 255}.
+Definition UnknownSettingKeyId := {n:N | n = 0 \/ n >= 7 /\ n <= 255}.
 Inductive  SettingKey   :=
   SettingHeaderTableSize        (* 0x1 *)
 | SettingEnablePush             (* 0x2 *)
@@ -33,7 +34,7 @@ Inductive  SettingKey   :=
 | SettingInitialWindowSize      (* 0x4 *)
 | SettingMaxFrameSize           (* 0x5 *)
 | SettingMaxHeaderBlockSize     (* 0x6 *)
-| SettingUnknown : SettingKeyId -> SettingKey.
+| SettingUnknown : UnknownSettingKeyId -> SettingKey.
 (* Extensions are permitted to use new settings. (Section 5.5) *)
 Definition Setting  := SettingKey * SettingValue.
 Definition Settings := SettingKey -> SettingValue.
@@ -47,7 +48,7 @@ Definition defaultSettings (key : SettingKey) : SettingValue :=
   | _                   => 4294967295
   end.
 
-Coercion fromSettingKeyId (id : SettingKeyId) : SettingKey :=
+Program Definition fromSettingKeyId (id : SettingKeyId) : SettingKey :=
   match id with
   | 1 => SettingHeaderTableSize
   | 2 => SettingEnablePush
@@ -57,8 +58,14 @@ Coercion fromSettingKeyId (id : SettingKeyId) : SettingKey :=
   | 6 => SettingMaxHeaderBlockSize
   | _ => SettingUnknown id
   end.
+Next Obligation.
+  destruct id. simpl in *. lia.
+Qed.
+Solve Obligations with (simpl; intros; lia).
 
-Coercion toSettingKeyId (key : SettingKey) : SettingKeyId :=
+Coercion fromSettingKeyId : SettingKeyId >-> SettingKey.
+
+Program Definition toSettingKeyId (key : SettingKey) : SettingKeyId :=
   match key with
   | SettingHeaderTableSize      => 1
   | SettingEnablePush           => 2
@@ -68,6 +75,10 @@ Coercion toSettingKeyId (key : SettingKey) : SettingKeyId :=
   | SettingMaxHeaderBlockSize   => 6
   | SettingUnknown id           => id
   end.
+Solve Obligations with (simpl; intros; lia).
+Next Obligation.
+  destruct id. simpl in *. lia.
+Qed.
 
 Instance EquivSettingKey : Equiv SettingKey :=
   { equiv := eq_equiv toSettingKeyId }.
