@@ -1,10 +1,11 @@
 From HTTP2.HPACK Require Import HPACKTypes.
-From Coq Require Import BinNat List Logic String Ascii.
+From Coq Require Import BinNat List Logic String Ascii Basics.
 Import ListNotations.
 Require Coq.Program.Tactics.
 Require Coq.Program.Wf.
 Open Scope list_scope.
 Open Scope N_scope.
+Open Scope program_scope.
 
 (* https://tools.ietf.org/html/rfc7541#section-5.1
    
@@ -122,3 +123,13 @@ Definition encode_hfr (hfr:HeaderFieldRepresentation) : list bool :=
   | LHFNeverIndexNewName h1 s1 h2 s2 => encode_LHFNeverIndexNewName h1 s1 h2 s2
   | DTableSizeUpdate i => encode_DTableSizeUpdate i
   end.
+
+Fixpoint pack_list_bool (b:list bool) : string :=
+  match b with
+  | b7 :: b6 :: b5 :: b4 :: b3 :: b2 :: b1 :: b0 :: tl =>
+    String (Ascii b0 b1 b2 b3 b4 b5 b6 b7) (pack_list_bool tl)
+  | _ => ""
+  end.
+
+Definition encode_headerBlock (hb: HeaderBlock) : HeaderList :=
+  map (pack_list_bool ∘ encode_hfr) hb.
