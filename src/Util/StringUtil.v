@@ -1,5 +1,15 @@
-From Coq Require Import String.
+(* Rename [ascii] and [string] to [byte] and [bytes].
+   This really should be [BytesUtil]. *)
+
+From Coq Require Export
+     Ascii String.
 Open Scope string_scope.
+
+Notation bit := bool (only parsing).
+Notation byte := ascii.
+Notation bytes := string.
+Infix ":::" := String
+(at level 60, right associativity) : string_scope.
 
 Fixpoint String_splitAt (n : nat) (s : string) : option (string * string) :=
   match n, s with
