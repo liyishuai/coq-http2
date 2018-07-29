@@ -35,9 +35,9 @@ Definition try_catch_r {T} (o:OptionE T) (g:HPACKError -> OptionE T) : OptionE T
 Definition try_catch_l {T} (o:OptionE T) (f: T -> OptionE T) : OptionE T :=
   try_catch o f inl.
 
-Definition fmap {T} (o:OptionE T) (f: T -> OptionE T) : OptionE T :=
+Definition fmap {T1 T2} (o:OptionE T1) (f: T1 -> OptionE T2) : OptionE T2 :=
   match o with
   | inr v => f v
-  | _ => o
+  | inl e => inl e
   end.
              

@@ -35,12 +35,12 @@ Inductive HeaderFieldRepresentation :=
 (* https://tools.ietf.org/html/rfc7541#section-6.1 *)
 | IndexedHF : N -> HeaderFieldRepresentation
 (* https://tools.ietf.org/html/rfc7541#section-6.2 *)
-| LHFIncrementIndexedName : N -> bool -> string -> HeaderFieldRepresentation
-| LHFIncrementNewName : bool -> string -> bool -> string -> HeaderFieldRepresentation
-| LHFWithoutIndexIndexedName : N -> bool -> string -> HeaderFieldRepresentation
-| LHFWithoutIndexNewName : bool -> string -> bool -> string -> HeaderFieldRepresentation
-| LHFNeverIndexIndexedName : N -> bool -> string -> HeaderFieldRepresentation
-| LHFNeverIndexNewName : bool -> string -> bool -> string -> HeaderFieldRepresentation
+| LHFIncrementIndexedName : N -> string -> HeaderFieldRepresentation
+| LHFIncrementNewName : string -> string -> HeaderFieldRepresentation
+| LHFWithoutIndexIndexedName : N -> string -> HeaderFieldRepresentation
+| LHFWithoutIndexNewName : string -> string -> HeaderFieldRepresentation
+| LHFNeverIndexIndexedName : N -> string -> HeaderFieldRepresentation
+| LHFNeverIndexNewName : string -> string -> HeaderFieldRepresentation
 (* https://tools.ietf.org/html/rfc7541#section-6.3 *)
 | DTableSizeUpdate : N -> HeaderFieldRepresentation.
 

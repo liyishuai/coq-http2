@@ -80,47 +80,51 @@ Definition encode_IndexedHF (i:N) : list bool :=
   true :: encode_N i 7.
 
 (* https://tools.ietf.org/html/rfc7541#section-6.2.1 *)
-Definition encode_LHFIncrementIndexedName (i1:N) (H2:bool) (s2:string) : list bool :=
+Definition encode_LHFIncrementIndexedName (i1:N) (H:bool) (s2:string) : list bool :=
   false :: true :: encode_N i1 6
-        ++ encode_string H2 s2.
+        ++ encode_string H s2.
 
 (* https://tools.ietf.org/html/rfc7541#section-6.2.1 *)
-Definition encode_LHFIncrementNewName (H1:bool) (s1:string) (H2:bool) (s2:string) : list bool :=
-  encode_N 64 8 ++ encode_string H1 s1 ++ encode_string H2 s2.
+Definition encode_LHFIncrementNewName (H:bool) (s1:string)
+           (s2:string) : list bool :=
+  encode_N 64 8 ++ encode_string H s1 ++ encode_string H s2.
 
 
 (* https://tools.ietf.org/html/rfc7541#section-6.2.2 *)
-Definition encode_LHFWithoutIndexIndexedName (i1:N) (H2:bool) (s2:string) : list bool :=
+Definition encode_LHFWithoutIndexIndexedName (i1:N) (H:bool) (s2:string) : list bool :=
   false :: false :: false :: false :: encode_N i1 4
-        ++ encode_string H2 s2.
+        ++ encode_string H s2.
 
 (* https://tools.ietf.org/html/rfc7541#section-6.2.2 *)
-Definition encode_LHFWithoutIndexNewName (H1:bool) (s1:string) (H2:bool) (s2:string) : list bool :=
-  encode_N 0 8 ++ encode_string H1 s1 ++ encode_string H2 s2.
+Definition encode_LHFWithoutIndexNewName (H:bool) (s1:string)
+           (s2:string) : list bool :=
+  encode_N 0 8 ++ encode_string H s1 ++ encode_string H s2.
 
 (* https://tools.ietf.org/html/rfc7541#section-6.2.3 *)
-Definition encode_LHFNeverIndexIndexedName (i1:N) (H2:bool) (s2:string) : list bool :=
+Definition encode_LHFNeverIndexIndexedName (i1:N) (H:bool) (s2:string) : list bool :=
   false :: false :: false :: true :: encode_N i1 4
-        ++ encode_string H2 s2.
+        ++ encode_string H s2.
 
 (* https://tools.ietf.org/html/rfc7541#section-6.2.3 *)
-Definition encode_LHFNeverIndexNewName (H1:bool) (s1:string) (H2:bool) (s2:string) : list bool :=
-  encode_N 16 8 ++ encode_string H1 s1 ++ encode_string H2 s2.
+Definition encode_LHFNeverIndexNewName (H:bool) (s1:string)
+           (s2:string) : list bool :=
+  encode_N 16 8 ++ encode_string H s1 ++ encode_string H s2.
 
 (* https://tools.ietf.org/html/rfc7541#section-6.3 *)
 Definition encode_DTableSizeUpdate (i:N) : list bool :=
   false :: false :: true :: encode_N i 5.
 
 (* https://tools.ietf.org/html/rfc7541#section-6 *)
-Definition encode_hfr (hfr:HeaderFieldRepresentation) : list bool :=
+(* H corresponds to whether huffman encoding is being used *)
+Definition encode_hfr (H:bool) (hfr:HeaderFieldRepresentation) : list bool :=
   match hfr with
   | IndexedHF i => encode_IndexedHF i
-  | LHFIncrementIndexedName i h2 s2 => encode_LHFIncrementIndexedName i h2 s2
-  | LHFIncrementNewName h1 s1 h2 s2 => encode_LHFIncrementNewName h1 s1 h2 s2
-  | LHFWithoutIndexIndexedName i h2 s2 => encode_LHFWithoutIndexIndexedName i h2 s2
-  | LHFWithoutIndexNewName h1 s1 h2 s2 => encode_LHFWithoutIndexNewName h1 s1 h2 s2
-  | LHFNeverIndexIndexedName i h2 s2 => encode_LHFNeverIndexIndexedName i h2 s2
-  | LHFNeverIndexNewName h1 s1 h2 s2 => encode_LHFNeverIndexNewName h1 s1 h2 s2
+  | LHFIncrementIndexedName i s2 => encode_LHFIncrementIndexedName i H s2
+  | LHFIncrementNewName s1 s2 => encode_LHFIncrementNewName H s1 s2
+  | LHFWithoutIndexIndexedName i s2 => encode_LHFWithoutIndexIndexedName i H s2
+  | LHFWithoutIndexNewName s1 s2 => encode_LHFWithoutIndexNewName H s1 s2
+  | LHFNeverIndexIndexedName i s2 => encode_LHFNeverIndexIndexedName i H s2
+  | LHFNeverIndexNewName s1 s2 => encode_LHFNeverIndexNewName H s1 s2
   | DTableSizeUpdate i => encode_DTableSizeUpdate i
   end.
 
@@ -131,5 +135,6 @@ Fixpoint pack_list_bool (b:list bool) : string :=
   | _ => ""
   end.
 
-Definition encode_headerBlock (hb: HeaderBlock) : HeaderList :=
-  map (pack_list_bool ∘ encode_hfr) hb.
+(* H corresponds to whether huffman encoding is being used *)
+Definition encode_headerBlock  (H:bool) (hb: HeaderBlock) : HeaderList :=
+  map (pack_list_bool ∘ (encode_hfr H)) hb.
