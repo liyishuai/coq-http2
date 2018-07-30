@@ -166,8 +166,6 @@ Program Definition decodeHeadersFrame :
     if testPriority fff
     then
       p <- unindex priority;;
-      assert (5 <=? n)
-             (ConnectionError ProtocolError "payload is not enough");;
       s <- get_bytes (N.to_nat (n - 5));;
       ret (HeadersFrame (Some p) s)
     else
@@ -177,7 +175,6 @@ Program Definition decodeHeadersFrame :
 Program Definition decodePriorityFrame :
   FramePayloadDecoder PriorityType :=
   fun _ _ _ _ n h =>
-    assert (5 =? n)
-           (ConnectionError ProtocolError "incorrect payload length");;
+    (* n must be 5 *)
     p <- unindex priority;;
     ret (PriorityFrame p).
