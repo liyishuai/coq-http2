@@ -59,7 +59,7 @@ Program Definition checkFrameHeader {m : Tycon}
   let length := payloadLength header in
   let fff    := flags         header in
   let id     := streamId      header in
-  assert (payloadLength header <=? settings SettingMaxFrameSize)
+  assert (payloadLength header <=? Bv2N 32 (settings SettingMaxFrameSize))
          (ConnectionError FrameSizeError
                           "exceeds maximum frame size");;
   assert (negb (nonZeroFrameType typ && isControl id))
@@ -109,7 +109,7 @@ Program Definition checkFrameHeader {m : Tycon}
     )
   | PushPromiseType =>
     (* checkme: https://hackage.haskell.org/package/http2-1.6.3/docs/src/Network-HTTP2-Decode.html#line-102 *)
-    assert (negb (0 =? settings SettingEnablePush))
+    assert (negb (0 =? Bv2N 32 (settings SettingEnablePush)))
            (ConnectionError ProtocolError "push not enabled");;
     assert (isResponse id)
            (ConnectionError
@@ -202,8 +202,8 @@ Definition decodeRSTStreamFrame :
 
 Definition decodeSetting {m : Tycon} `{Monad m} `{MParser byte m} :
   m Setting :=
-  id  <-(N_of_ByteVector) get_vec 2;;
-  val <-(N_of_ByteVector) get_vec 4;;
+  id  <-(Bvector_of_ByteVector) get_vec 2;;
+  val <-(Bvector_of_ByteVector) get_vec 4;;
   ret (id, val).
 
 Definition decodeSettingsFrame :

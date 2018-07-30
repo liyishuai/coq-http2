@@ -36,25 +36,28 @@ Inductive Priority :=
   }.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
-Definition SettingValue := N.
-Definition SettingKey   := N.
-Definition SettingHeaderTableSize      : SettingKey := 1.
-Definition SettingEnablePush           : SettingKey := 2.
-Definition SettingMaxConcurrentStreams : SettingKey := 3.
-Definition SettingInitialWindowSize    : SettingKey := 4.
-Definition SettingMaxFrameSize         : SettingKey := 5.
-Definition SettingMaxHeaderBlockSize   : SettingKey := 6.
+Definition SettingValue := Bvector 32.
+Definition SettingKey   := Bvector 16.
+Definition SettingHeaderTableSize      : SettingKey := N2Bv_sized 16 1.
+Definition SettingEnablePush           : SettingKey := N2Bv_sized 16 2.
+Definition SettingMaxConcurrentStreams : SettingKey := N2Bv_sized 16 3.
+Definition SettingInitialWindowSize    : SettingKey := N2Bv_sized 16 4.
+Definition SettingMaxFrameSize         : SettingKey := N2Bv_sized 16 5.
+Definition SettingMaxHeaderBlockSize   : SettingKey := N2Bv_sized 16 6.
 
 (* Extensions are permitted to use new settings. (Section 5.5) *)
 Definition Setting  := SettingKey * SettingValue.
 Definition Settings := SettingKey -> SettingValue.
 
 Definition defaultSettings (key : SettingKey) : SettingValue :=
-  if key =? SettingHeaderTableSize   then 4096 else
-  if key =? SettingEnablePush        then 1    else
-  if key =? SettingInitialWindowSize then 65535 else
-  if key =? SettingMaxFrameSize      then 16384 else
-                                          4294967295.
+  (N2Bv_sized 32)
+    match Bv2N 16 key with
+    | 1 =>       4096              (* SettingHeaderTableSize   *)
+    | 2 =>          1              (* SettingEnablePush        *)
+    | 4 =>      65535              (* SettingInitialWindowSize *)
+    | 5 =>      16384              (* SettingMaxFrameSize      *)
+    | _ => 4294967295
+    end.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.9 *)
 Definition WindowSize := N.
