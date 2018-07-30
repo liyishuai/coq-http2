@@ -159,7 +159,7 @@ Program Definition priority {m : nat -> Tycon}
             weight := weight |}
   )%imonad.
 
-Program Definition decodeHeadersFrame :
+Definition decodeHeadersFrame :
   FramePayloadDecoder HeadersType :=
   fun _ _ _ _ n h =>
     let fff := flags h in
@@ -172,9 +172,16 @@ Program Definition decodeHeadersFrame :
       s <- get_bytes (N.to_nat n);;
       ret (HeadersFrame None s).
 
-Program Definition decodePriorityFrame :
+Definition decodePriorityFrame :
   FramePayloadDecoder PriorityType :=
   fun _ _ _ _ n h =>
     (* n must be 5 *)
     p <- unindex priority;;
     ret (PriorityFrame p).
+
+Definition decodeRSTStreamFrame :
+  FramePayloadDecoder RSTStreamType :=
+  fun _ _ _ _ n h =>
+    (* n must be 4 *)
+    ecode <-(N_of_ByteVector) get_vec 4;;
+    ret (RSTStreamFrame (fromErrorCodeId ecode)).
