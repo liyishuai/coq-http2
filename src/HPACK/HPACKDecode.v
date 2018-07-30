@@ -67,7 +67,7 @@ Definition decode_string (s:string) : OptionE (string * string) :=
     let prefix := N.land n 127 in
     v1 <- decode_integer prefix 7 s' ;;
     v2 <- get_n_string (snd v1) (fst v1) ;;
-    if Neqb H 128 then ret v2
+    if BinNat.N.eqb H 128 then ret v2
     else s'' <- decode_hstring (fst v2) ;; ret (s'', snd v2)
   end.
 
@@ -118,3 +118,7 @@ Definition decode_HFR (s:string) : OptionE (HeaderFieldRepresentation * string) 
               else v1 <- decode_string (snd v) ;;
                    ret (LHFWithoutIndexIndexedName (fst v) (fst v1), snd v1)
   end.
+
+Definition decode_HL (hl:HeaderList) : OptionE HeaderBlock :=
+  List.fold_left (fun acc s => a <- decode_HFR s ;; h <- acc ;;
+                            ret (fst a :: h)) hl (ret (nil%list)).

@@ -116,7 +116,7 @@ Definition encode_DTableSizeUpdate (i:N) : list bool :=
 
 (* https://tools.ietf.org/html/rfc7541#section-6 *)
 (* H corresponds to whether huffman encoding is being used *)
-Definition encode_hfr (H:bool) (hfr:HeaderFieldRepresentation) : list bool :=
+Definition encode_HFR (H:bool) (hfr:HeaderFieldRepresentation) : list bool :=
   match hfr with
   | IndexedHF i => encode_IndexedHF i
   | LHFIncrementIndexedName i s2 => encode_LHFIncrementIndexedName i H s2
@@ -136,5 +136,5 @@ Fixpoint pack_list_bool (b:list bool) : string :=
   end.
 
 (* H corresponds to whether huffman encoding is being used *)
-Definition encode_headerBlock  (H:bool) (hb: HeaderBlock) : HeaderList :=
-  map (pack_list_bool ∘ (encode_hfr H)) hb.
+Definition encode_HB  (H:bool) (hb: HeaderBlock) : HeaderList :=
+  map (pack_list_bool ∘ (encode_HFR H)) hb.
