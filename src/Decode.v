@@ -21,7 +21,7 @@ Program Definition decode31bit {m : nat -> Tycon}
   icast (
     b <-(Bvector_of_ByteVector) iget_vec 4;;
     let '(e, sid) := Vector_uncons b in
-    iret (e, N_of_Bvector sid))%imonad.
+    iret (e, Bv2N 31 sid))%imonad.
 
 Definition decodeStreamId :
   forall {m : nat -> Tycon} `{IMonad_nat m} `{MParser byte (m 1%nat)},

@@ -2,20 +2,6 @@ From Coq Require Import Ascii Bvector NArith String.
 From HTTP2 Require Import Util.ByteVector Util.VectorUtil.
 Open Scope string_scope.
 
-Fixpoint pack {n : nat} (v : Bvector n) : string :=
-  match v with
-  | b0::b1::b2::b3::b4::b5::b6::b7::v' =>
-    String (Ascii b0 b1 b2 b3 b4 b5 b6 b7) (pack v')
-  | _ => ""
-  end.
-
-Fixpoint unpack (s : string) : Bvector (length s * 8) :=
-  match s with
-  | EmptyString => Bnil
-  | String (Ascii b0 b1 b2 b3 b4 b5 b6 b7) s' =>
-    b0::b1::b2::b3::b4::b5::b6::b7::unpack s'
-  end.
-
 Fixpoint Bvector_of_ByteVector {n : nat} (v : ByteVector n) : Bvector (n * 8) :=
   match v with
   | [] => []
@@ -39,10 +25,38 @@ Fixpoint ByteVector_of_Bvector {n : nat} : Bvector (n * 8) -> ByteVector n :=
       Ascii b0 b1 b2 b3 b4 b5 b6 b7::ByteVector_of_Bvector v8
   end.
 
-Fixpoint N_of_Bvector_rec {n : nat} (acc : N) (v : Bvector n) : N :=
-  match v with
-  | [] => acc
-  | b::v' => N_of_Bvector_rec ((if b then N.succ_double else N.double) acc) v'
+(* https://github.com/coq/coq/pull/8169 *)
+Fixpoint P2Bv_sized (m : nat) (p : positive) : Bvector m :=
+  match m with
+  | O => []
+  | S m =>
+    match p with
+    | xI p => true  :: P2Bv_sized  m p
+    | xO p => false :: P2Bv_sized  m p
+    | xH   => true  :: Bvect_false m
+    end
   end.
 
-Definition N_of_Bvector {n : nat} : Bvector n -> N := N_of_Bvector_rec 0.
+Definition N2Bv_sized (m : nat) (n : N) : Bvector m :=
+  match n with
+  | N0     => Bvect_false m
+  | Npos p => P2Bv_sized  m p
+  end.
+
+Lemma N2Bv_sized_Nsize (n : N) :
+  N2Bv_sized (N.size_nat n) n = N2Bv n.
+Proof with simpl; auto.
+  destruct n...
+  induction p...
+  all: rewrite IHp...
+Qed.
+
+Lemma N2Bv_sized_Bv2N (n : nat) (v : Bvector n) :
+  N2Bv_sized n (Bv2N n v) = v.
+Proof with simpl; auto.
+  induction v...
+  destruct h;
+  unfold N2Bv_sized;
+  destruct (Bv2N n v) as [|[]];
+  rewrite <- IHv...
+Qed.
