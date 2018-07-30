@@ -175,7 +175,7 @@ Inductive FrameType :=
 | UnknownType : FrameTypeId -> FrameType.
 (* Extensions are permitted to define new frame types. (Section 5.5) *)
 
-(* Frames that can only be used in control streams (ID 0) *)
+(* Frames that can only be used in control frames (ID 0) *)
 Definition zeroFrameType (typ : FrameType) : bool :=
   match typ with
   | SettingsType => true
@@ -184,7 +184,8 @@ Definition zeroFrameType (typ : FrameType) : bool :=
   | _            => false
   end.
 
-(* Frames that cannot be used in control streams *)
+(* Frames that must be associated to a stream (ID <> 0).
+   Equivalently, they cannot be used in control frames *)
 Definition nonZeroFrameType (typ : FrameType) : bool :=
   match typ with
   | DataType         => true
