@@ -2,6 +2,7 @@ From HTTP2 Require Import Types.
 From HTTP2.Util Require Import BitField ByteVector BitVector VectorUtil.
 From Coq Require Import Basics Bvector String BinNat List Ascii Vector.
 
+Import VectorNotations.
 Open Scope N_scope.
 Open Scope string_scope.
 Open Scope program_scope.
@@ -21,11 +22,8 @@ Definition padding (p:option N) : string :=
     N.peano_rect (fun _ => string) "" (fun n' s => String Ascii.zero s) n
   end.
 
-Definition streamid_to_vector (E:bool) (sid:StreamId) : ByteVector 4 :=
-  match Vector_uncons (ByteVector_of_N 4 sid) with
-  | (Ascii b0 b1 b2 b3 b4 b5 b6 _, v) =>
-    Vector.cons ascii (Ascii b0 b1 b2 b3 b4 b5 b6 E) 3 v
-  end.
+Program Definition streamid_to_vector (E:bool) (sid:StreamId) : ByteVector 4 :=
+  ByteVector_of_Bvector (E::sid).
 
 Definition streamid_to_string (E:bool) := to_string ∘ streamid_to_vector E.
 
@@ -84,6 +82,8 @@ Definition buildRSTStream (e:ErrorCode) :=
   (* Error Code (32) *)
   to_string (@ByteVector_of_N 4 (toErrorCodeId e)).
 
+Open Scope list_scope.
+Open Scope string_scope.
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
 Program Fixpoint buildSettings (sets:list Setting) :=
   match sets with
@@ -129,7 +129,7 @@ Definition buildGoAway (sid:StreamId) (e:ErrorCode) (s:string) :=
 Definition buildWindowUpdate (ws:WindowSize) :=
   (* R *)
   (* Window Size Increment (31) *)
-  streamid_to_string false ws.
+  streamid_to_string false (N2Bv_sized 31 ws).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.10 *)
 Definition buildContinuation (hbf:HeaderBlockFragment) :=

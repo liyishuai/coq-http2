@@ -1,14 +1,26 @@
-From Coq Require Import Bvector FMaps NArith OrderedTypeEx String micromega.Psatz.
-From HTTP2 Require Import Equiv Util.BitField Util.ByteVector.
+From Coq Require Import
+     Bvector
+     FMaps
+     NArith
+     OrderedTypeEx
+     String
+     Vector
+     micromega.Psatz.
+From HTTP2 Require Import
+     Equiv
+     Util.BitField
+     Util.BitVector
+     Util.ByteVector
+     Util.VectorUtil.
 Import ListNotations.
 Open Scope N_scope.
 Open Scope type_scope.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.5.1.1 *)
-Definition StreamId := N.
-Definition isControl : StreamId -> bool := N.eqb 0.
-Definition isRequest : StreamId -> bool := N.odd.
-Definition isResponse (n : StreamId) : bool := negb (n =? 0) && N.even n.
+Definition StreamId := Bvector 31.
+Definition isControl : StreamId -> bool := forallb negb.
+Definition isRequest : StreamId -> bool := hd.
+Definition isResponse (v : StreamId) : bool := existsb id v && negb (hd v).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.5.3.2 *)
 Definition Weight := N.
