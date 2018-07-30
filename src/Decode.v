@@ -103,7 +103,7 @@ Program Definition checkFrameHeader {m : Tycon}
     assert (8 =? length)
            (ConnectionError
               FrameSizeError
-              "payload length is 8 in ping frame")
+              "payload length must be 8 bytes in ping frame")
   | GoAwayType =>
     assert (8 <=? length)
            (ConnectionError
@@ -113,7 +113,7 @@ Program Definition checkFrameHeader {m : Tycon}
     assert (4 =? length)
            (ConnectionError
               FrameSizeError
-              "payload length is 4 in window update frame")
+              "payload length must be 4 bytes in window update frame")
   | _ => ret tt
   end.
 
