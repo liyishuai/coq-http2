@@ -15,16 +15,27 @@ Open Scope bool_scope.
 Open Scope N_scope.
 Open Scope monad_scope.
 
+Program Definition decode31bit {m : nat -> Tycon}
+           `{IMonad_nat m} `{MParser byte (m 1%nat)} :
+  m 4%nat (bit * N)%type :=
+  icast (
+    b <-(Bvector_of_ByteVector) iget_vec 4;;
+    let '(e, sid) := Vector_uncons b in
+    iret (e, N_of_Bvector sid))%imonad.
+
+Definition decodeStreamId :
+  forall {m : nat -> Tycon} `{IMonad_nat m} `{MParser byte (m 1%nat)},
+    m 4%nat (bit * StreamId)%type := @decode31bit.
+
 Program Definition decodeFrameHeader {m : nat -> Tycon}
         `{IMonad_nat m} `{MParser byte (m 1%nat)} :
   m 9%nat (FrameType * FrameHeader)%type :=
   icast (
     let fromFrameTypeId' x := fromFrameTypeId (N_of_ByteVector x) in
-    length     <-(N_of_ByteVector)       iget_vec 3;;
-    frameType  <-(fromFrameTypeId')      iget_vec 1;;
-    flags      <-(Bvector_of_ByteVector) iget_vec 1;;
-    r_streamId <-(Bvector_of_ByteVector) iget_vec 4;;
-    let streamId := N_of_Bvector (snd (splitAt 1 r_streamId)) in
+    length         <-(N_of_ByteVector)        iget_vec 3;;
+    frameType      <-(fromFrameTypeId')       iget_vec 1;;
+    flags          <-(Bvector_of_ByteVector)  iget_vec 1;;
+    '(_, streamId) <- decodeStreamId;;              (* 4 *)
     iret (frameType, {| payloadLength := length;
                         flags         := flags;
                         streamId      := streamId |}))%imonad.
@@ -147,10 +158,7 @@ Program Definition priority {m : nat -> Tycon}
   m 5%nat Priority :=
   icast (
     (* Split a 32-bit field into 1+31. *)
-    let uncons x : bit * _ :=
-        Vector_uncons (@Bvector_of_ByteVector 4 x) in
-    '(e, vid) <-(uncons) iget_vec 4;;
-    let id := N_of_Bvector vid in
+    '(e, id) <- decodeStreamId;;
     w <-(N_of_ascii) get_byte;;
     let weight := w + 1 in
     iret {| exclusive := e;
@@ -202,3 +210,40 @@ Definition decodeSettingsFrame :
                       ret (s :: ss)%list)
                    (ret nil);;
     ret (SettingsFrame ss).
+
+Definition decodePushPromiseFrame :
+  FramePayloadDecoder PushPromiseType :=
+  fun _ _ _ _ n h =>
+    (* n must be at least 4 *)
+    id <-(snd) unindex decodeStreamId;;
+    bs <- get_bytes (N.to_nat (n-4));;
+    ret (PushPromiseFrame id bs).
+
+Definition decodePingFrame :
+  FramePayloadDecoder PingType :=
+  fun _ _ _ _ n h =>
+    (* n must be 8 *)
+    v <- get_vec 8;;
+    ret (PingFrame v).
+
+Definition decodeGoAwayFrame :
+  FramePayloadDecoder GoAwayType :=
+  fun _ _ _ _ n h =>
+    (* n must be at least 8 *)
+    id <-(snd) unindex decodeStreamId;;
+    ecode <-(N_of_ByteVector) get_vec 4;;
+    debug <- get_bytes (N.to_nat (n - 8));;
+    ret (GoAwayFrame id (fromErrorCodeId ecode) debug).
+
+Definition decodeWindowUpdateFrame :
+  FramePayloadDecoder WindowUpdateType :=
+  fun _ _ _ _ n h =>
+    (* n must be 4 *)
+    inc <-(snd) unindex decode31bit;;
+    ret (WindowUpdateFrame inc).
+
+Definition decodeContinuationFrame :
+  FramePayloadDecoder ContinuationType :=
+  fun _ _ _ _ n h =>
+    hbf <- get_bytes (N.to_nat n);;
+    ret (ContinuationFrame hbf).

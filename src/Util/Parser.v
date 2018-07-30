@@ -29,6 +29,11 @@ Notation "x <-( f ) c1 ;; c2" :=
 (at level 100, f at next level, c1 at next level,
  right associativity) : monad_scope.
 
+Notation "' pat <-( f ) c1 ;; c2" :=
+  (bind c1 (fun _x => let 'pat := f _x in c2))
+(at level 100, pat pattern, f at next level, c1 at next level,
+ right associativity) : monad_scope.
+
 End MonadNotations.
 
 (** * Throwing errors *)
