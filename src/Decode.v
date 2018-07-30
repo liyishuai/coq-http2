@@ -11,6 +11,9 @@ From ExtLib Require Import Functor Monad.
 Import FunctorNotation MonadNotations.
 Import IMonadNotations.
 
+From Coq Require Vector.
+Import Vector.VectorNotations.
+
 Open Scope bool_scope.
 Open Scope N_scope.
 Open Scope monad_scope.
@@ -163,8 +166,8 @@ Program Definition priority {m : nat -> Tycon}
   icast (
     (* Split a 32-bit field into 1+31. *)
     '(e, id) <- decodeStreamId;;
-    w <-(N_of_ascii) get_byte;;
-    let weight := w + 1 in
+    w <- get_byte;;
+    let weight := Bvector_of_ByteVector [w] in
     iret {| exclusive := e;
             streamDependency := id;
             weight := weight |}

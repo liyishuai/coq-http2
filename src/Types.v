@@ -23,7 +23,7 @@ Definition isRequest : StreamId -> bool := hd.
 Definition isResponse (v : StreamId) : bool := existsb id v && negb (hd v).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.5.3.2 *)
-Definition Weight := N.
+Definition Weight := Bvector 8.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.2 *)
 Definition HeaderBlockFragment := string.

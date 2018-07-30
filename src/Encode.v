@@ -62,7 +62,7 @@ Definition buildHeaders (p:option N) (op:option Priority) (hbf:HeaderBlockFragme
     (* StreamDependency? (31) *)
     streamid_to_string (exclusive p) (streamDependency p) ++
     (* Weight? (8) *)
-    to_string (@ByteVector_of_N 1 (weight p) )
+    to_string (@ByteVector_of_Bvector 1 (weight p) )
   end
     (* Header Block Fragment ( * ) *)
     ++ hbf ++
@@ -75,7 +75,7 @@ Definition buildPriority (p:Priority) :=
   (* StreamDependency? (31) *)
   streamid_to_string (exclusive p) (streamDependency p) ++
   (* Weight? (8) *)
-  to_string (@ByteVector_of_N 1 (weight p)).
+  to_string (@ByteVector_of_Bvector 1 (weight p)).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.4 *)
 Definition buildRSTStream (e:ErrorCode) :=
