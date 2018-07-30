@@ -25,63 +25,24 @@ Inductive Priority :=
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
 Definition SettingValue := N.
-Definition SettingKeyId := {n:N | n >= 0 /\ n <= 255}.
-Definition UnknownSettingKeyId := {n:N | n = 0 \/ n >= 7 /\ n <= 255}.
-Inductive  SettingKey   :=
-  SettingHeaderTableSize        (* 0x1 *)
-| SettingEnablePush             (* 0x2 *)
-| SettingMaxConcurrentStreams   (* 0x3 *)
-| SettingInitialWindowSize      (* 0x4 *)
-| SettingMaxFrameSize           (* 0x5 *)
-| SettingMaxHeaderBlockSize     (* 0x6 *)
-| SettingUnknown : UnknownSettingKeyId -> SettingKey.
+Definition SettingKey   := N.
+Definition SettingHeaderTableSize      : SettingKey := 1.
+Definition SettingEnablePush           : SettingKey := 2.
+Definition SettingMaxConcurrentStreams : SettingKey := 3.
+Definition SettingInitialWindowSize    : SettingKey := 4.
+Definition SettingMaxFrameSize         : SettingKey := 5.
+Definition SettingMaxHeaderBlockSize   : SettingKey := 6.
+
 (* Extensions are permitted to use new settings. (Section 5.5) *)
 Definition Setting  := SettingKey * SettingValue.
 Definition Settings := SettingKey -> SettingValue.
 
 Definition defaultSettings (key : SettingKey) : SettingValue :=
-  match key with
-  | SettingHeaderTableSize   =>  4096
-  | SettingEnablePush        =>     1
-  | SettingInitialWindowSize => 65535
-  | SettingMaxFrameSize      => 16384
-  | _                   => 4294967295
-  end.
-
-Program Definition fromSettingKeyId (id : SettingKeyId) : SettingKey :=
-  match id with
-  | 1 => SettingHeaderTableSize
-  | 2 => SettingEnablePush
-  | 3 => SettingMaxConcurrentStreams
-  | 4 => SettingInitialWindowSize
-  | 5 => SettingMaxFrameSize
-  | 6 => SettingMaxHeaderBlockSize
-  | _ => SettingUnknown id
-  end.
-Next Obligation.
-  destruct id. simpl in *. lia.
-Qed.
-Solve Obligations with (simpl; intros; lia).
-
-Coercion fromSettingKeyId : SettingKeyId >-> SettingKey.
-
-Program Definition toSettingKeyId (key : SettingKey) : SettingKeyId :=
-  match key with
-  | SettingHeaderTableSize      => 1
-  | SettingEnablePush           => 2
-  | SettingMaxConcurrentStreams => 3
-  | SettingInitialWindowSize    => 4
-  | SettingMaxFrameSize         => 5
-  | SettingMaxHeaderBlockSize   => 6
-  | SettingUnknown id           => id
-  end.
-Solve Obligations with (simpl; intros; lia).
-Next Obligation.
-  destruct id. simpl in *. lia.
-Qed.
-
-Instance EquivSettingKey : Equiv SettingKey :=
-  { equiv := eq_equiv toSettingKeyId }.
+  if key =? SettingHeaderTableSize   then 4096 else
+  if key =? SettingEnablePush        then 1    else
+  if key =? SettingInitialWindowSize then 65535 else
+  if key =? SettingMaxFrameSize      then 16384 else
+                                          4294967295.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.9 *)
 Definition WindowSize := N.

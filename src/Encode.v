@@ -90,7 +90,7 @@ Program Fixpoint buildSettings (sets:list Setting) :=
   | List.nil => ""
   | (sk, sv) :: tl =>
     (* Identifier (16) *)
-    to_string (@ByteVector_of_N 2 (toSettingKeyId sk))
+    to_string (@ByteVector_of_N 2 sk)
     (* Value (32) *)
     ++ to_string (@ByteVector_of_N 4 sv) ++ buildSettings tl
   end.

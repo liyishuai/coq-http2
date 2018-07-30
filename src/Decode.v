@@ -1,6 +1,5 @@
 From HTTP2 Require Import
      Equiv
-     Encode
      Types
      Util.BitVector
      Util.ByteVector
@@ -185,3 +184,21 @@ Definition decodeRSTStreamFrame :
     (* n must be 4 *)
     ecode <-(N_of_ByteVector) get_vec 4;;
     ret (RSTStreamFrame (fromErrorCodeId ecode)).
+
+Definition decodeSetting {m : Tycon} `{Monad m} `{MParser byte m} :
+  m Setting :=
+  id  <-(N_of_ByteVector) get_vec 2;;
+  val <-(N_of_ByteVector) get_vec 4;;
+  ret (id, val).
+
+Definition decodeSettingsFrame :
+  FramePayloadDecoder SettingsType :=
+  fun _ _ _ _ n h =>
+    (* n must be a multiple of 6 *)
+    let n := N.div n 6%N in
+    ss <- N.iter n (fun more =>
+                      s <- decodeSetting;;
+                      ss <- more;;
+                      ret (s :: ss)%list)
+                   (ret nil);;
+    ret (SettingsFrame ss).
