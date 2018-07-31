@@ -50,6 +50,5 @@ Definition HeaderBlock := list HeaderFieldRepresentation.
 
 (* Error type for HPACK *)
 Inductive HPACKError :=
-| processError : HPACKError
-| decodeError : HPACKError
-| encodeError : HPACKError.
+| processError : string -> HPACKError
+| decodeError : string -> HPACKError.

@@ -1,5 +1,5 @@
-From HTTP2.HPACK Require Import Util.HPACKOptionE HPACKTypes HPACKEncode.
-From HTTP2 Require Import Types.
+From HTTP2.HPACK Require Import HPACKTypes HPACKEncode.
+From HTTP2 Require Import Types Util.Parser.
 From Coq Require Import Strings.String BinNat Lists.List Basics.
 From ExtLib Require Import Monad.
 Import ListNotations MonadNotation.
@@ -76,12 +76,15 @@ Definition static_table : Table :=
     ("www-authenticate", "")].
 
 (* https://tools.ietf.org/html/rfc7541#section-2.3.3 *)
-Definition index_into_tables (i:N) (dynamic_table:DTable) : OptionE HeaderField :=
-  if i =? 0 then inl processError
+Definition index_into_tables {m:Tycon} `{Monad m} `{MError HPACKError m} (i:N)
+           (dynamic_table:DTable) : m HeaderField :=
+  if i =? 0 then throw (processError "0 is an invalid index")
   else if i <=? N.of_nat (length static_table)
-       then perr (nth_error static_table (N.to_nat i))
-       else perr (nth_error (snd dynamic_table)
-                            (N.to_nat i - (length static_table + 1))%nat).
+       then opt_err (processError "Index not in static table")
+                    (nth_error static_table (N.to_nat i))
+       else opt_err (processError "Index not in dynamic table")
+                    (nth_error (snd dynamic_table)
+                               (N.to_nat i - (length static_table + 1))%nat).
 
 (* https://tools.ietf.org/html/rfc7541#section-2.3.2 *)
 (* https://tools.ietf.org/html/rfc7541#section-2.3.3 *)
@@ -91,19 +94,25 @@ Definition eqb_hf (s1 s2:HeaderField) : bool :=
                                   (if string_dec ss1 ss2 then true else false)
   end.
 
-Definition find_table_h (h:HeaderField) (t:Table) : OptionE N :=
+Definition find_table_h (h:HeaderField) (t:Table) : option N :=
   let fix loop i l :=
       match l with
-      | [] => inl processError
+      | [] => None 
       | a :: tl =>
-        if eqb_hf h a then ret i else loop (N.succ i) (tl)
+        if eqb_hf h a then Some i else loop (N.succ i) (tl)
       end in
-  n <- loop 1 t ;; ret n.
+  loop 1 t.
 
-Definition find_table (h:HeaderField) (dynamic_table:DTable) : OptionE N :=
-  try_catch_r (find_table_h h static_table)
-              (fun _ => try_catch_l (find_table_h h (snd dynamic_table))
-                                 (fun x => ret (x + N.of_nat (length static_table)))).
+Definition find_table {m:Tycon} `{Monad m} `{MError HPACKError m}
+           (h:HeaderField) (dynamic_table:DTable) : m N :=
+  match (find_table_h h static_table) with
+  | None =>
+    match (find_table_h h (snd dynamic_table)) with
+    | None => throw (processError "Header Field not in any table")
+    | Some x => ret (x + N.of_nat (length static_table))
+    end
+  | Some x => ret x
+  end.
 
 (* The size of an entry is the sum of its name's length in octets (as defined in
    https://tools.ietf.org/html/rfc7541#section-5.2), its value's length in 

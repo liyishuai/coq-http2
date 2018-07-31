@@ -1,4 +1,4 @@
-From Coq Require Import Vector.
+From Coq Require Import Vector BinNat.
 From ExtLib Require Import
      Data.Nat
      Structures.Monad
@@ -52,6 +52,13 @@ Definition assert {error : Type} {m : Tycon}
   when (negb b)
        (throw e).
 
+Definition opt_err {T error : Type} {m : Tycon} `{Monad m} `{MError error m}
+           (e : error) (o : option T) : m T :=
+  match o with
+  | None => throw e
+  | Some v => ret v
+  end.
+
 (** * Parsers *)
 
 (* Contexts with access to a token stream. *)
@@ -73,6 +80,15 @@ Fixpoint get_bytes {m : Tycon} `{Monad m} `{MParser byte m}
     bs <- get_bytes n;;
     ret (b ::: bs)
   end%monad.
+
+(* Read [n] bytes, where n is a BinNat. *)
+Fixpoint get_bytes_N {m : Tycon} `{Monad m} `{MParser byte m}
+         (n : N) : m bytes :=
+  N.peano_rect (fun _ => m bytes) (ret "")
+               (fun n acc =>
+                  b <- get_byte;;
+                  bs <- acc ;;
+                  ret (b ::: bs))%monad n.
 
 (* Read [n] bytes into a sized [ByteVector]. *)
 Fixpoint get_vec {m : Tycon} `{Monad m} `{MParser byte m}

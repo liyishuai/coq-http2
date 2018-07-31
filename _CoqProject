@@ -1,6 +1,5 @@
 -R src HTTP2
 src/HPACK/HPACKTypes.v
-src/HPACK/Util/HPACKOptionE.v
 src/HPACK/HPACKEncode.v
 src/HPACK/HPACKDecode.v
 src/HPACK/HPACKTables.v
