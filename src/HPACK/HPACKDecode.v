@@ -32,16 +32,53 @@ else
     while B & 128 == 128
     return I
  *)
-Fixpoint decode_integer_h {m:Tycon} `{Monad m} `{MError HPACKError m}
+(*
+Program Fixpoint decode_integer_h {m:Tycon} `{Monad m} `{MError HPACKError m}
+           `{MParser byte m} (fuel:N) (M:N) { measure fuel (N.lt) } : m N :=
+  match fuel =? 0 with
+  | true =>  throw (decodeError "Integer value too large")
+  | false => a <- get_byte ;;
+            let B := (N_of_ascii a) in
+            let I := (BinNatDef.N.land B 127) * 2^M in
+            if N.land B 128 =? 128
+            then e <- decode_integer_h (fuel - 1)  (M + 7);;
+                 ret (I + e)
+            else ret I
+  end.
+Obligation 1.
+symmetry in Heq_anonymous. rewrite N.eqb_neq in Heq_anonymous.
+apply N.sub_lt; try reflexivity. pose proof (N.le_ge_cases 1 fuel).
+inversion H2; auto. apply (N.le_1_r fuel) in H3.  
+destruct H3; try contradiction; subst. reflexivity.
+Defined.
+Obligation 2.
+apply Wf.measure_wf. apply N.lt_wf_0.
+Fail Defined.
+*)
+
+Definition decode_integer_h {m:Tycon} `{Monad m} `{MError HPACKError m}
            `{MParser byte m} (M:N) : m N :=
   a <- get_byte ;;
   let B := (N_of_ascii a) in
   let I := (BinNatDef.N.land B 127) * 2^M in
-  if N.land B 128 =? 128
-  then (*e <- decode_integer_h (M + 7) ;;
-       ret (I + e)*) ret I
-  else ret I.
+  ret I.
+          
+(* To justify using fuel (and the value) in decode_integer_h:
 
+   "Integer encodings that exceed implementation limits -- in
+    value or octet length -- MUST be treated as decoding errors.
+    Different limits can be set for each of the different uses of
+    integers, based on implementation constraints."
+
+   For fuel, I used 10000, because integers are only used as indices,
+   which means the dynamic table would have to have size 10000 for this
+   to be a problem. If this turns out to be a use case, this value can
+   be raised.
+
+   Alternatively, the fuel could be a parameter passed in from when the
+   header block fragments are combined to form a header block, or used in
+   an MParser with an internal fuel. 
+*)
 Definition decode_integer {m:Tycon} `{Monad m} `{MError HPACKError m}
            `{MParser byte m} (prefix:N) (n:N) : m N :=
   if prefix <? 2^n - 1 then ret prefix
