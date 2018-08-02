@@ -1,4 +1,4 @@
-From Coq Require Import String BinNat Ascii BinNatDef Vector.
+From Coq Require Import String BinNat Ascii BinNatDef Vector List.
 From HTTP2 Require Import
      Equiv
      Types
@@ -10,10 +10,11 @@ From HTTP2 Require Import
 From HTTP2.HPACK Require Import HPACKTypes HPACKTables.
 From ExtLib Require Import Monads.
 Import MonadNotation.
-Import Vector.VectorNotations.
+Import ListNotations.
 Open Scope N_scope.
 Open Scope string_scope.
 Open Scope monad_scope.
+Open Scope list_scope.
 
 (* Decodes a string to an integer where at least the first octet (ascii) is 
    assumed to be an encoded integer. The prefix is a value of n bits.
@@ -68,8 +69,61 @@ Definition decode_integer {m:Tycon} `{Monad m} `{MError HPACKError m}
 
 (*  https://tools.ietf.org/html/rfc7541#section-5.2 *)
 (* Decodes the huffman encoded string s *)
+Definition list_eqb (l1 l2: list bool) :=
+  if list_eq_dec Bool.bool_dec l1 l2 then true else false.
+
+Program Fixpoint lookup (l:list bool) { measure (length l) } :=
+  match l with
+  | [] => None
+  | _ =>
+    match find (fun '(a, bs) => list_eqb l bs) huffman_table with
+    | None =>
+      let a := last l false in
+      let l' := removelast l in
+      option_map (fun '(v, l) => (v, l ++ [a])) (lookup l')
+    | Some v =>
+      Some (fst v, [])
+    end
+  end.
+Obligation 1. apply removelast_decreasing; auto.
+Defined.
+
+(* Double check this code, maybe rewrite for clarity *)
+Fixpoint decode_hstring_h {m:Tycon} `{Monad m} `{MError HPACKError m}
+         `{MParser byte m} (buffer:list bool) (s:string) : m string :=
+  match s with
+  | EmptyString =>
+    if PeanoNat.Nat.ltb (length buffer) 8 && fold_left (fun acc b => b && acc) buffer true
+    then ret "" else throw (decodeError "Unexpected huffman ascii at end of string")
+  | String a s' =>
+    match a with
+    | Ascii b7 b6 b5 b4 b3 b2 b1 b0 =>
+      (* To catch the case where an entire huffman encoded string is contained
+         in b0-b7, run lookup twice.
+         Note since a requirement of huffman is that no encoded string is a prefix
+         of another encoded string, it's safe to look further, ie look at all 8 bits
+         first. *)
+      let buffer' := (buffer ++ [b0; b1; b2; b3; b4; b5; b6; b7]) in
+      match lookup buffer' with
+      | None => decode_hstring_h buffer' s'
+      | Some (a, l) =>
+        if a =? 256 then throw (decodeError "Premature end of string in huffman")
+        else
+          match lookup l with
+          | None =>
+            v <- decode_hstring_h l s';;
+            ret (String (ascii_of_N a) v)
+          | Some (b, l') =>
+            v <- decode_hstring_h l' s';;
+            ret (String (ascii_of_N a) (String (ascii_of_N b) v))
+          end
+      end
+    end
+  end.    
+
 Definition decode_hstring {m:Tycon} `{Monad m} `{MError HPACKError m}
-           `{MParser byte m} (s:string) : m string := ret "".
+           `{MParser byte m} (s:string) : m string :=
+  decode_hstring_h List.nil s.
 
 (* Decodes an encoded string to a raw string. *)
 Definition decode_string {m:Tycon} `{Monad m} `{MError HPACKError m}

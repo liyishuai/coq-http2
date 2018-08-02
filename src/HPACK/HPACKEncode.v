@@ -1,4 +1,4 @@
-From HTTP2.HPACK Require Import HPACKTypes.
+From HTTP2.HPACK Require Import HPACKTypes HPACKTables.
 From Coq Require Import BinNat List Logic String Ascii Basics.
 Import ListNotations.
 Require Coq.Program.Tactics.
@@ -66,14 +66,31 @@ Fixpoint string_to_bool_list (s:string) : list bool :=
     b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: string_to_bool_list s'
   end.
 
-(** TODO: Huffman Encoding **)
-Definition huffman_string (s:string) : list bool := [].
+Fixpoint huffman_string (s:string) : list bool :=
+  match s with
+  | EmptyString => []
+  | String a s' =>
+    match find (fun x => BinNatDef.N.eqb (N_of_ascii a) (fst x)) huffman_table with
+    | None => [] (* Unreachable *)
+    | Some l => snd l
+    end ++ huffman_string s'
+  end.
 
 (* Encodes as list of bools (binary number in msb) *)
 Definition encode_string (H:bool) (s:string) : list bool :=
-  H :: encode_N (N.of_nat (length s)) 7 ++
-    if H then huffman_string s
-      else string_to_bool_list s. 
+  H :: 
+    if H then
+      let y := huffman_string s in
+      let x := N.of_nat (List.length y) in
+      let len := x / 8 in
+      if x mod 8 =? 0 then encode_N len 7 ++ y
+      else encode_N (len + 1) 7 ++ y ++
+                    let fix loop i :=
+                        match i with
+                        | O => []
+                        | S n => true :: loop n
+                        end in loop (N.to_nat (x mod 8))
+    else encode_N (N.of_nat (length s)) 7 ++ string_to_bool_list s. 
 
 (* https://tools.ietf.org/html/rfc7541#section-6.1 *)
 Definition encode_IndexedHF (i:N) : list bool :=
