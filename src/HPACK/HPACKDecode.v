@@ -150,7 +150,7 @@ Definition decode_HFR {m:Tycon} `{Monad m} `{MError HPACKError m}
   else
     let bit1 := N.land octet 64 in
     (* https://tools.ietf.org/html/rfc7541#section-6.2.1 *)
-    if bit1 =? 1
+    if bit1 =? 64
     then v <- decode_integer (N.land octet 63) 6;;
          if v =? 0 then v1 <- decode_string;;
                         v2 <- decode_string;;

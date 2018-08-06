@@ -1,5 +1,5 @@
 From HTTP2.HPACK Require Import HPACKTypes HPACKTables.
-From Coq Require Import BinNat List Logic String Ascii Basics.
+From Coq Require Import BinNat List Logic String Ascii Basics Recdef.
 Import ListNotations.
 Require Coq.Program.Tactics.
 Require Coq.Program.Wf.
@@ -31,22 +31,21 @@ Fixpoint encode_N_help (i:N) (n:nat) : list bool :=
     (if (N.shiftr_nat i n') mod 2 =? 0 then false else true) :: encode_N_help i n'
   end.
 
-Program Fixpoint encode_N_help_rec (i:N) {measure i ( N.lt )} : list bool :=
+Function encode_N_help_rec (i:N) {wf (N.lt) i } : list bool :=
   match i <? 128 with
   | true => encode_N_help i 8
   | _ =>
     encode_N_help ((i mod 128) + 128) 8
                   ++ encode_N_help_rec (i / 128)
   end.
-Obligation 1.
-  pose proof (N.ltb_lt i 128); pose proof not_iff_compat; apply H1 in H0;
+Proof. 
+  intros. 
+  pose proof (N.ltb_lt i 128); pose proof not_iff_compat; apply H0 in H;
     assert ((i <? 128) <> true).
-    intros contra; rewrite contra in H; contradiction.
-    rewrite H0 in H2; rewrite N.nlt_ge in H2; apply N.div_lt;
+    intros contra; rewrite contra in teq; inversion teq.
+    rewrite H in H1. rewrite N.nlt_ge in H1; apply N.div_lt;
       try (compute; reflexivity); eapply (N.lt_le_trans _ 128);
         eauto; compute; reflexivity.
-Defined.
-Obligation 3.
   apply N.lt_wf_0.
 Defined.
 

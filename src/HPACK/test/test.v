@@ -1,0 +1,213 @@
+From HTTP2.HPACK Require Import HPACKDecode HPACKEncode HPACKTypes.
+From HTTP2 Require Import
+     Equiv
+     Types
+     Util.BitVector
+     Util.ByteVector
+     Util.Parser
+     Util.ParserInstances
+     Util.VectorUtil
+     Util.StringUtil. 
+From Coq Require Import List BinNat String Ascii NArith Basics.
+From ExtLib Require Import Monads.
+Import MonadNotation.
+Import ListNotations.
+Open Scope monad_scope.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.1.1 *)
+(* The value 10 is to be encoded with a 5-bit prefix *)
+Example C1_1 : (encode_N 10 5) = [false; true; false; true; false].
+Proof. reflexivity. Qed.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.1.2 *)
+(* The value I=1337 is to be encoded with a 5-bit prefix. *)
+Example C1_2 : (encode_N 1337 5) = [true; true; true; true; true; true;
+                                      false; false; true; true; false;
+                                        true; false; false; false; false;
+                                          false; true; false; true; false].
+Proof. simpl. repeat (rewrite encode_N_help_rec_equation; simpl).
+       reflexivity. Qed.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.1.3 *)
+(* The value 42 is to be encoded starting at an octet boundary.  This
+   implies that a 8-bit prefix is used. *)
+Example C1_3 : (encode_N 42 8) = [false; false; true; false; true;
+                                    false; true; false].
+Proof. reflexivity. Qed.
+
+(* Hex interpretation for unit testing *)
+
+(* Binary numbers. Most operations assume little-endianness,
+   but this can also be used as a big-endian representation. *)
+Inductive binary : Type :=
+| b0 : binary -> binary
+| b1 : binary -> binary
+| b_ : binary (* End *)
+.
+
+Fixpoint zeroes (d : nat) : binary :=
+  match d with
+  | O => b_
+  | S d => b0 (zeroes d)
+  end.
+
+Fixpoint rev' (y z : binary) : binary :=
+  match z with
+  | b0 z => rev' (b0 y) z
+  | b1 z => rev' (b1 y) z
+  | b_ => y
+  end.
+
+(* big-endian <-> little-endian *)
+(* Eta-expand because this somehow ends up in the extracted
+   code and we need to not evaluate it. *)
+Definition rev (z : binary) : binary := rev' b_ z.
+
+Notation bit := bool.
+Notation zero := false.
+Notation one := true.
+
+Definition of_bit (a : bool) : binary -> binary :=
+  match a with
+  | false => b0
+  | true => b1
+  end.
+
+Fixpoint hex' (acc : binary) (s : string) : binary :=
+  match s with
+  | EmptyString => acc
+  | String x s =>
+    let acc :=
+        match x with
+        (* Digit *)
+        | Ascii a0 a1 a2 a3 _ _ false _ =>
+          of_bit a0 (of_bit a1 (of_bit a2 (of_bit a3 acc)))
+        | "a" => b0 (b1 (b0 (b1 acc)))
+        | "b" => b1 (b1 (b0 (b1 acc)))
+        | "c" => b0 (b0 (b1 (b1 acc)))
+        | "d" => b1 (b0 (b1 (b1 acc)))
+        | "e" => b0 (b1 (b1 (b1 acc)))
+        | "f" => b1 (b1 (b1 (b1 acc)))
+        | _ => b0 (b0 (b0 (b0 acc)))
+        end%char in
+    hex' acc s
+  end.
+
+Definition hex : string -> binary := hex' b_.
+
+Fixpoint positive_to_binary (d : nat) (n : positive) : binary :=
+  match n, d with
+  | xI n, S d => b1 (positive_to_binary d n)
+  | xO n, S d => b0 (positive_to_binary d n)
+  | xH,   S d => b1 (zeroes d)
+  | _, O => b_
+  end.
+
+Definition N_to_binary (d : nat) (n : N) : binary :=
+  match n with
+  | N0 => zeroes d
+  | Npos n => positive_to_binary d n
+  end.
+
+Fixpoint binary_to_N (z : binary) :=
+  match z with
+  | b_ => 0%N
+  | b1 z => N.succ_double (binary_to_N z)
+  | b0 z => N.double (binary_to_N z)
+  end.
+
+(* Turn a string into a list of binary bytes *)
+Fixpoint string_to_binary (s:string) : list binary :=
+  match s with
+  | EmptyString => []
+  | String a s' =>
+    (N_to_binary 8) (N_of_ascii a) :: string_to_binary s'
+  end.
+
+Fixpoint hex_bytes_to_binary (s:list string) : list binary := map hex s.
+Fixpoint hex_bytes_to_string (s:list string) : string :=
+  fold_right String EmptyString (map (ascii_of_N ∘ binary_to_N ∘ hex) s).
+
+(* Https://tools.ietf.org/html/rfc7541#appendix-C.2.1 *)
+(* Header list to encode:
+
+   custom-key: custom-header *)
+Example C2_1_encode :
+  hex_bytes_to_binary ["40"; "0a"; "63"; "75"; "73"; "74"; "6f"; "6d";
+                         "2d"; "6b"; "65"; "79"; "0d"; "63"; "75"; "73";
+                           "74"; "6f"; "6d"; "2d"; "68"; "65"; "61";
+                             "64"; "65"; "72"] =
+  string_to_binary (pack_list_bool (encode_HFR false
+                             (LHFIncrementNewName "custom-key"
+                                                  "custom-header"))).
+Proof. reflexivity. Qed.
+
+Definition decode (s:string) :=
+  StateMonad.runStateT (run_HPACK_parser (@decode_HFR HPACK_parser Monad_HPACK_parser
+                                 MError_HPACK_parser MParser_HPACK_parser)) s.
+
+Example C2_1_decode :
+  decode (hex_bytes_to_string ["40"; "0a"; "63"; "75"; "73"; "74";
+                                       "6f"; "6d"; "2d"; "6b"; "65"; "79";
+                                         "0d"; "63"; "75"; "73"; "74"; "6f";
+                                           "6d"; "2d"; "68"; "65"; "61";"64";
+                                             "65"; "72"])
+  = inr (LHFIncrementNewName "custom-key" "custom-header", "").
+Proof. reflexivity. Qed.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.2.2 *)
+(* 
+  Header list to encode:
+
+   :path: /sample/path
+ *)
+Example C2_2_encode :
+  hex_bytes_to_binary ["04"; "0c"; "2f"; "73"; "61"; "6d"; "70"; "6c";
+                         "65"; "2f"; "70"; "61"; "74"; "68"] =
+  string_to_binary (pack_list_bool (encode_HFR false
+                             (LHFWithoutIndexIndexedName 4
+                                                  "/sample/path"))).
+Proof. reflexivity. Qed.
+
+Example C2_2_decode :
+  decode (hex_bytes_to_string ["04"; "0c"; "2f"; "73"; "61"; "6d"; "70"; "6c";
+                                 "65"; "2f"; "70"; "61"; "74"; "68"])
+  = inr (LHFWithoutIndexIndexedName 4 "/sample/path", "").
+Proof. reflexivity. Qed.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.2.3 *)
+(* 
+   Header list to encode:
+
+   password: secret
+ *)
+Example C2_3_encode :
+  hex_bytes_to_binary ["10"; "08"; "70"; "61"; "73"; "73"; "77";
+                         "6f"; "72"; "64"; "06"; "73"; "65"; "63";
+                           "72"; "65"; "74"] =
+  string_to_binary (pack_list_bool (encode_HFR false
+                             (LHFNeverIndexNewName "password"
+                                                  "secret"))).
+Proof. reflexivity. Qed.
+
+Example C2_3_decode :
+  decode (hex_bytes_to_string ["10"; "08"; "70"; "61"; "73"; "73"; "77";
+                         "6f"; "72"; "64"; "06"; "73"; "65"; "63";
+                           "72"; "65"; "74"])
+  = inr (LHFNeverIndexNewName "password" "secret", "").
+Proof. reflexivity. Qed.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.2.4 *)
+(* Header list to encode:
+
+   :method: GET *)
+Example C2_4_encode :
+  hex_bytes_to_binary ["82"] =
+  string_to_binary (pack_list_bool (encode_HFR false
+                             (IndexedHF 2))).
+Proof. reflexivity. Qed.
+
+Example C2_4_decode :
+  decode (hex_bytes_to_string ["82"])
+  = inr (IndexedHF 2, "").
+Proof. reflexivity. Qed.
