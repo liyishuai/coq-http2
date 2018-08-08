@@ -7,7 +7,7 @@ From HTTP2 Require Import
      Util.VectorUtil
      Util.StringUtil.
 From Coq Require Import NArith.
-From ExtLib Require Import Functor Monad.
+From ExtLib Require Import Functor Monad MonadExc.
 Import FunctorNotation MonadNotations.
 Import IMonadNotations.
 
@@ -52,7 +52,7 @@ apply ByteVector_upperbound.
 Qed.
 
 Program Definition checkFrameHeader {m : Tycon}
-        `{Monad m} `{MError HTTP2Error m}
+        `{Monad m} `{MonadExc HTTP2Error m}
         (settings : Settings) (typfrm : FrameType * FrameHeader) :
   m unit :=
   let (typ, header) := typfrm in
@@ -137,7 +137,7 @@ Program Definition checkFrameHeader {m : Tycon}
 Solve All Obligations with repeat constructor; intro; discriminate.
 
 Definition decodeWithPadding {m : Tycon}
-           `{Monad m} `{MError HTTP2Error m} `{MParser byte m}
+           `{Monad m} `{MonadExc HTTP2Error m} `{MParser byte m}
            (len : N) (h : FrameHeader) : m bytes :=
   let fff := flags h in
   if testPadded fff then (
@@ -154,7 +154,7 @@ Definition decodeWithPadding {m : Tycon}
 Close Scope nat_scope.
 
 Definition FramePayloadDecoder (frameType : FrameType) :=
-  forall m `{Monad m} `{MError HTTP2Error m} `{MParser byte m},
+  forall m `{Monad m} `{MonadExc HTTP2Error m} `{MParser byte m},
     N -> FrameHeader -> m (FramePayload frameType).
 
 Definition decodeDataFrame : FramePayloadDecoder DataType :=

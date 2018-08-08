@@ -6,6 +6,7 @@ From ExtLib Require Import
      Data.Monads.EitherMonad
      Data.Monads.ReaderMonad
      Data.Monads.StateMonad
+     Structures.MonadExc
      Structures.Monad
      Structures.MonadTrans
      Structures.Monoid.
@@ -43,13 +44,46 @@ Instance Monad_HPACK_parser : Monad HPACK_parser := {
     mkHPACKParser (run_HPACK_parser p >>= fun x => run_HPACK_parser (q x))%monad;
 }.
 
-
-Instance MError_parser : MError HTTP2Error parser := {
-  throw _ e := mkParser (lift (inl e));
+Instance MonadExc_HTTP2Error : MonadExc HTTP2Error (sum HTTP2Error) := {
+  raise _ e := inl e;
+  catch _ a f :=
+    match a with
+    | inl e => f e
+    | inr v => inr v
+    end;
 }.
 
-Instance MError_HPACK_parser : MError HPACKError HPACK_parser := {
-  throw _ e := mkHPACKParser (lift (inl e));
+Instance MonadExc_HPACKError : MonadExc HPACKError (sum HPACKError) := {
+  raise _ e := inl e;
+  catch _ a f :=
+    match a with
+    | inl e => f e
+    | inr v => inr v
+    end;
+}.
+
+Instance MonadExc_parser : MonadExc HTTP2Error parser := {
+  raise := fun _ e => mkParser (lift (inl e));
+  catch := fun _ v h =>
+             let f := (fun e => match h e with
+                             | mkParser s => s
+                             end) in
+             match v with
+             | mkParser s =>
+               mkParser (catch s f)
+             end;
+}.
+
+Instance MonadExc_HPACK_parser : MonadExc HPACKError HPACK_parser := {
+  raise := fun _ e => mkHPACKParser (lift (inl e));
+  catch := fun _ v h =>
+             let f := (fun e => match h e with
+                             | mkHPACKParser s => s
+                             end) in
+             match v with
+             | mkHPACKParser s =>
+               mkHPACKParser (catch s f)
+             end;
 }.
 
 Instance MParser_parser : MParser byte parser := {

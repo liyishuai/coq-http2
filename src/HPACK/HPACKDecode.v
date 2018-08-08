@@ -33,10 +33,10 @@ else
     while B & 128 == 128
     return I
  *)
-Fixpoint decode_integer_h {m:Tycon} `{Monad m} `{MError HPACKError m}
+Fixpoint decode_integer_h {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            `{MParser byte m} (fuel:nat) (M:N) : m N :=
   match fuel with
-  | O =>  throw (decodeError "Integer value too large")
+  | O =>  raise (decodeError "Integer value too large")
   | S fuel' => a <- get_byte ;;
             let B := (N_of_ascii a) in
             let I := (BinNatDef.N.land B 127) * 2^M in
@@ -61,7 +61,7 @@ Fixpoint decode_integer_h {m:Tycon} `{Monad m} `{MError HPACKError m}
    header block fragments are combined to form a header block, or used in
    an MParser with an internal fuel. 
 *)
-Definition decode_integer {m:Tycon} `{Monad m} `{MError HPACKError m}
+Definition decode_integer {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            `{MParser byte m} (prefix:N) (n:N) : m N :=
   if prefix <? 2^n - 1 then ret prefix
   else a <- decode_integer_h 0 100 ;;
@@ -89,12 +89,12 @@ Obligation 1. apply removelast_decreasing; auto.
 Defined.
 
 (* Double check this code, maybe rewrite for clarity *)
-Fixpoint decode_hstring_h {m:Tycon} `{Monad m} `{MError HPACKError m}
+Fixpoint decode_hstring_h {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
          `{MParser byte m} (buffer:list bool) (s:string) : m string :=
   match s with
   | EmptyString =>
     if PeanoNat.Nat.ltb (length buffer) 8 && fold_left (fun acc b => b && acc) buffer true
-    then ret "" else throw (decodeError "Unexpected huffman ascii at end of string")
+    then ret "" else raise (decodeError "Unexpected huffman ascii at end of string")
   | String a s' =>
     match a with
     | Ascii b7 b6 b5 b4 b3 b2 b1 b0 =>
@@ -107,7 +107,7 @@ Fixpoint decode_hstring_h {m:Tycon} `{Monad m} `{MError HPACKError m}
       match lookup buffer' with
       | None => decode_hstring_h buffer' s'
       | Some (a, l) =>
-        if a =? 256 then throw (decodeError "Premature end of string in huffman")
+        if a =? 256 then raise (decodeError "Premature end of string in huffman")
         else
           match lookup l with
           | None =>
@@ -121,12 +121,12 @@ Fixpoint decode_hstring_h {m:Tycon} `{Monad m} `{MError HPACKError m}
     end
   end.    
 
-Definition decode_hstring {m:Tycon} `{Monad m} `{MError HPACKError m}
+Definition decode_hstring {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            `{MParser byte m} (s:string) : m string :=
   decode_hstring_h List.nil s.
 
 (* Decodes an encoded string to a raw string. *)
-Definition decode_string {m:Tycon} `{Monad m} `{MError HPACKError m}
+Definition decode_string {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            `{MParser byte m} : m string :=
   a <- get_byte ;;
   let n := N_of_ascii a in
@@ -139,7 +139,7 @@ Definition decode_string {m:Tycon} `{Monad m} `{MError HPACKError m}
 
 (* https://tools.ietf.org/html/rfc7541#section-6 *)
 (* Decodes a header field representation *)
-Definition decode_HFR {m:Tycon} `{Monad m} `{MError HPACKError m}
+Definition decode_HFR {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            `{MParser byte m} : m HeaderFieldRepresentation :=
   a <- get_byte ;;
   let octet := N_of_ascii a in
@@ -179,3 +179,23 @@ Definition decode_HFR {m:Tycon} `{Monad m} `{MError HPACKError m}
                          ret (LHFWithoutIndexNewName v1 v2)
           else v1 <- decode_string;;
                ret (LHFWithoutIndexIndexedName v v1).
+
+Fixpoint decode_HB_h {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
+         `{MParser byte m} (n:nat) : m HeaderBlock :=
+  match n with
+  | O => raise (decodeError "Too many headers in header block")
+  | S n' =>
+    h <- decode_HFR;;
+    hs <- catch (decode_HB_h n') (fun e =>
+                            match e with
+                            | decodeError s =>
+                              if string_dec s "not enough bytes"
+                              then ret [] else raise e
+                            | _ => raise e
+                            end);;
+    ret (h :: hs)
+  end.  
+
+Definition decode_HB {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
+           `{MParser byte m} : m HeaderBlock :=
+  decode_HB_h 100.

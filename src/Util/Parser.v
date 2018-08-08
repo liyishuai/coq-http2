@@ -2,6 +2,7 @@ From Coq Require Import Vector BinNat.
 From ExtLib Require Import
      Data.Nat
      Structures.Monad
+     Structures.MonadExc
      Structures.Monoid.
 Import MonadNotation.
 From HTTP2 Require Import
@@ -36,26 +37,17 @@ Notation "' pat <-( f ) c1 ;; c2" :=
 
 End MonadNotations.
 
-(** * Throwing errors *)
-
-(* Contexts where exceptions of type [error] can be thrown. *)
-Class MError (error : Type) (m : Tycon) := {
-  throw : forall a, error -> m a
-}.
-
-Arguments throw {error m _ a}.
-
-(* Throw an exception if [b = false]. *)
+(* Raise an exception if [b = false]. *)
 Definition assert {error : Type} {m : Tycon}
-           `{Monad m} `{MError error m}
+           `{Monad m} `{MonadExc error m}
            (b : bool) (e : error) : m unit :=
   when (negb b)
-       (throw e).
+       (raise e).
 
-Definition opt_err {T error : Type} {m : Tycon} `{Monad m} `{MError error m}
+Definition opt_err {T error : Type} {m : Tycon} `{Monad m} `{MonadExc error m}
            (e : error) (o : option T) : m T :=
   match o with
-  | None => throw e
+  | None => raise e
   | Some v => ret v
   end.
 

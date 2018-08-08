@@ -8,7 +8,7 @@ Import MonadNotation.
 (* Takes a Header Field Representation (which is part of a Header Block) and 
    a dynamic table, and processes the hfr, returning either an error,
    or a potentially mutated dynamic table. *)
-Definition processHFR {m:Tycon} `{Monad m} `{MError HPACKError m}
+Definition processHFR {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            (hfr:HeaderFieldRepresentation) (dynamic_table:DTable) : m DTable :=
   match hfr with
   | LHFIncrementIndexedName x s2 =>

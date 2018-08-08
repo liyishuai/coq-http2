@@ -82,13 +82,9 @@ Definition encode_string (H:bool) (s:string) : list bool :=
       let y := huffman_string s in
       let x := N.of_nat (List.length y) in
       let len := x / 8 in
-      if x mod 8 =? 0 then encode_N len 7 ++ y
-      else encode_N (len + 1) 7 ++ y ++
-                    let fix loop i :=
-                        match i with
-                        | O => []
-                        | S n => true :: loop n
-                        end in loop (N.to_nat (x mod 8))
+      encode_N (len + 1) 7 ++ y ++
+               if x mod 8 =? 0 then repeat true (N.to_nat 8)
+               else repeat true (N.to_nat (x mod 8))
     else encode_N (N.of_nat (length s)) 7 ++ string_to_bool_list s. 
 
 (* https://tools.ietf.org/html/rfc7541#section-6.1 *)

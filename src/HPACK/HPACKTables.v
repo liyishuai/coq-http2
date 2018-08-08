@@ -1,7 +1,7 @@
 From HTTP2.HPACK Require Import HPACKTypes.
 From HTTP2 Require Import Types Util.Parser.
 From Coq Require Import Strings.String BinNat Lists.List Basics.
-From ExtLib Require Import Monad.
+From ExtLib Require Import Monad MonadExc.
 Import ListNotations MonadNotation.
 Require Coq.Structures.OrderedTypeEx Program.Wf.
 Open Scope list_scope.
@@ -76,9 +76,9 @@ Definition static_table : Table :=
     ("www-authenticate", "")].
 
 (* https://tools.ietf.org/html/rfc7541#section-2.3.3 *)
-Definition index_into_tables {m:Tycon} `{Monad m} `{MError HPACKError m} (i:N)
+Definition index_into_tables {m:Tycon} `{Monad m} `{MonadExc HPACKError m} (i:N)
            (dynamic_table:DTable) : m HeaderField :=
-  if i =? 0 then throw (processError "0 is an invalid index")
+  if i =? 0 then raise (processError "0 is an invalid index")
   else if i <=? N.of_nat (length static_table)
        then opt_err (processError "Index not in static table")
                     (nth_error static_table (N.to_nat i))
@@ -103,12 +103,12 @@ Definition find_table_h (h:HeaderField) (t:Table) : option N :=
       end in
   loop 1 t.
 
-Definition find_table {m:Tycon} `{Monad m} `{MError HPACKError m}
+Definition find_table {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            (h:HeaderField) (dynamic_table:DTable) : m N :=
   match (find_table_h h static_table) with
   | None =>
     match (find_table_h h (snd dynamic_table)) with
-    | None => throw (processError "Header Field not in any table")
+    | None => raise (processError "Header Field not in any table")
     | Some x => ret (x + N.of_nat (length static_table))
     end
   | Some x => ret x

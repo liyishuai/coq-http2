@@ -143,8 +143,10 @@ Example C2_1_encode :
 Proof. reflexivity. Qed.
 
 Definition decode (s:string) :=
-  StateMonad.runStateT (run_HPACK_parser (@decode_HFR HPACK_parser Monad_HPACK_parser
-                                 MError_HPACK_parser MParser_HPACK_parser)) s.
+  StateMonad.runStateT (run_HPACK_parser decode_HFR) s.
+
+Definition decode_mult (s:string) :=
+  StateMonad.runStateT (run_HPACK_parser decode_HB) s.
 
 Example C2_1_decode :
   decode (hex_bytes_to_string ["40"; "0a"; "63"; "75"; "73"; "74";
@@ -211,3 +213,160 @@ Example C2_4_decode :
   decode (hex_bytes_to_string ["82"])
   = inr (IndexedHF 2, "").
 Proof. reflexivity. Qed.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.3.1 *)
+(* Header list to encode:
+
+   :method: GET
+   :scheme: http
+   :path: /
+   :authority: www.example.com*)
+Example C3_1_encode :
+  hex_bytes_to_binary ["82"; "86"; "84"; "41"; "0f"; "77"; "77"; "77";
+                         "2e"; "65"; "78"; "61"; "6d"; "70"; "6c"; "65";
+                           "2e"; "63"; "6f"; "6d"] =
+  fold_left (fun acc b => acc ++ (string_to_binary b))
+            (encode_HB false [IndexedHF 2; IndexedHF 6; IndexedHF 4;
+               LHFIncrementIndexedName 1 "www.example.com"]) [].
+Proof. reflexivity. Qed.
+
+Example C3_1_decode :
+  decode_mult (hex_bytes_to_string ["82"; "86"; "84"; "41"; "0f"; "77"; "77"; "77";
+                         "2e"; "65"; "78"; "61"; "6d"; "70"; "6c"; "65";
+                           "2e"; "63"; "6f"; "6d"]) =
+  inr ([IndexedHF 2; IndexedHF 6; IndexedHF 4;
+          LHFIncrementIndexedName 1 "www.example.com"], "").
+Proof. reflexivity. Qed.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.3.2 *)
+(* Header list to encode:
+
+   :method: GET
+   :scheme: http
+   :path: /
+   :authority: www.example.com
+   cache-control: no-cache*)
+Example C3_2_encode :
+  hex_bytes_to_binary ["82"; "86"; "84"; "be"; "58"; "08"; "6e"; "6f"; "2d";
+                         "63"; "61"; "63"; "68"; "65"] =
+  fold_left (fun acc b => acc ++ (string_to_binary b))
+            (encode_HB false [IndexedHF 2; IndexedHF 6; IndexedHF 4;
+               IndexedHF 62; LHFIncrementIndexedName 24 "no-cache"]) [].
+Proof. reflexivity. Qed.
+
+Example C3_2_decode :
+  decode_mult (hex_bytes_to_string ["82"; "86"; "84"; "be"; "58"; "08"; "6e";
+                                      "6f"; "2d"; "63"; "61"; "63"; "68";
+                                        "65"]) =
+  inr ([IndexedHF 2; IndexedHF 6; IndexedHF 4;
+               IndexedHF 62; LHFIncrementIndexedName 24 "no-cache"], "").
+Proof. reflexivity. Qed.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.3.3 *)
+(* Header list to encode:
+
+   :method: GET
+   :scheme: https
+   :path: /index.html
+   :authority: www.example.com
+   custom-key: custom-value*)
+Example C3_3_encode :
+  hex_bytes_to_binary ["82"; "87"; "85"; "bf"; "40"; "0a"; "63"; "75"; "73";
+                         "74"; "6f"; "6d"; "2d"; "6b"; "65"; "79"; "0c"; "63";
+                           "75"; "73"; "74"; "6f"; "6d"; "2d"; "76"; "61";
+                             "6c"; "75"; "65"] =
+  fold_left (fun acc b => acc ++ (string_to_binary b))
+            (encode_HB false [IndexedHF 2; IndexedHF 7; IndexedHF 5;
+               IndexedHF 63; LHFIncrementNewName "custom-key" "custom-value"]) [].
+Proof. reflexivity. Qed.
+
+Example C3_3_decode :
+  decode_mult (hex_bytes_to_string ["82"; "87"; "85"; "bf"; "40"; "0a"; "63";
+                                      "75"; "73"; "74"; "6f"; "6d"; "2d"; "6b";
+                                        "65"; "79"; "0c"; "63"; "75"; "73";
+                                          "74"; "6f"; "6d"; "2d"; "76"; "61";
+                                            "6c"; "75"; "65"]) =
+  inr ([IndexedHF 2; IndexedHF 7; IndexedHF 5;
+               IndexedHF 63; LHFIncrementNewName "custom-key" "custom-value"], "").
+Proof. reflexivity. Qed.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.4.1 *)
+(* Header list to encode:
+
+   :method: GET
+   :scheme: http
+   :path: /
+   :authority: www.example.com*)
+Example abc :
+  hex_bytes_to_binary ["41"; "8c"; "f1"; "e3"; "c2"; "e5"; "f2"; "3a";
+                         "6b"; "a0"; "ab"; "90"; "f4"; "ff"] =
+  string_to_binary
+    (pack_list_bool
+       (encode_HFR true
+                   (LHFIncrementIndexedName 1 "www.example.com"))).
+Proof. reflexivity. Qed.
+Example C4_1_encode :
+  hex_bytes_to_binary ["82"; "86"; "84"; "41"; "8c"; "f1"; "e3"; "c2"; "e5";
+                         "f2"; "3a"; "6b"; "a0"; "ab"; "90"; "f4"; "ff"] =
+  fold_left (fun acc b => acc ++ (string_to_binary b))
+            (encode_HB true [IndexedHF 2; IndexedHF 6; IndexedHF 4;
+               LHFIncrementIndexedName 1 "www.example.com"]) [].
+Proof. reflexivity. Qed.
+
+Example C4_1_decode :
+  decode_mult (hex_bytes_to_string ["82"; "86"; "84"; "41"; "8c"; "f1"; "e3";
+                                      "c2"; "e5"; "f2"; "3a"; "6b"; "a0";
+                                        "ab"; "90"; "f4"; "ff"]) =
+  inr ([IndexedHF 2; IndexedHF 6; IndexedHF 4;
+               LHFIncrementIndexedName 1 "www.example.com"], "").
+Proof. reflexivity. Qed.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.4.2 *)
+(* Header list to encode:
+
+   :method: GET
+   :scheme: http
+   :path: /
+   :authority: www.example.com
+   cache-control: no-cache*)
+Example C4_2_encode :
+  hex_bytes_to_binary ["82"; "86"; "84"; "be"; "58"; "86"; "a8";
+                         "eb"; "10"; "64"; "9c"; "bf"] =
+  fold_left (fun acc b => acc ++ (string_to_binary b))
+            (encode_HB true [IndexedHF 2; IndexedHF 6; IndexedHF 4;
+               IndexedHF 62; LHFIncrementIndexedName 24 "no-cache"]) [].
+Proof. compute. reflexivity. Qed.
+
+Example C4_2_decode :
+  decode_mult (hex_bytes_to_string ["82"; "86"; "84"; "be"; "58"; "86";
+                                      "a8"; "eb"; "10"; "64"; "9c";
+                                        "bf"]) =
+  inr ([IndexedHF 2; IndexedHF 6; IndexedHF 4;
+               IndexedHF 62; LHFIncrementIndexedName 24 "no-cache"], "").
+Proof. reflexivity. Qed.
+
+(* https://tools.ietf.org/html/rfc7541#appendix-C.4.3*)
+(* Header list to encode:
+
+   :method: GET
+   :scheme: https
+   :path: /index.html
+   :authority: www.example.com
+   custom-key: custom-value*)
+Example C4_3_encode :
+  hex_bytes_to_binary ["82"; "87"; "85"; "bf"; "40"; "88"; "25"; "a8";
+                        "49"; "e9"; "5b"; "a9"; "7d"; "7f"; "89"; "25"; 
+                         "a8"; "49"; "e9"; "5b"; "b8"; "e8"; "b4"; "bf"] =
+  fold_left (fun acc b => acc ++ (string_to_binary b))
+            (encode_HB true [IndexedHF 2; IndexedHF 7; IndexedHF 5;
+               IndexedHF 63; LHFIncrementNewName "custom-key" "custom-value"]) [].
+Proof. reflexivity. Qed.
+
+Example C4_3_decode :
+  decode_mult (hex_bytes_to_string ["82"; "87"; "85"; "bf"; "40"; "88"; "25"; "a8";
+                        "49"; "e9"; "5b"; "a9"; "7d"; "7f"; "89"; "25"; 
+                         "a8"; "49"; "e9"; "5b"; "b8"; "e8"; "b4"; "bf"]) =
+  inr ([IndexedHF 2; IndexedHF 7; IndexedHF 5;
+               IndexedHF 63; LHFIncrementNewName "custom-key" "custom-value"], "").
+Proof. reflexivity. Qed.
+
