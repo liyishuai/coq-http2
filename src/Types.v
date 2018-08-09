@@ -56,8 +56,8 @@ Definition SettingMaxHeaderBlockSize   : SettingKeyId := 6.
 Definition Setting  := SettingKey * SettingValue.
 Definition Settings := SettingKey -> SettingValue.
 
-Definition defaultSettings (key : SettingKey) : SettingValue :=
-    match SettingKey2Id key with
+Definition defaultSettings (key : SettingKeyId) : SettingValue :=
+    match key with
     | 1 =>       4096              (* SettingHeaderTableSize   *)
     | 2 =>          1              (* SettingEnablePush        *)
     | 4 =>      65535              (* SettingInitialWindowSize *)
@@ -71,7 +71,7 @@ Definition WindowSize := Bvector 31.
 (* https://http2.github.io/http2-spec/index.html#rfc.section.7 *)
 Definition ErrorCodeId := N.
 Definition ErrorCode   := Bvector 32.
-Coercion toErrorCodeId   := Bv2N 32       : ErrorCode -> ErrorCodeId.
+Coercion   toErrorCodeId := Bv2N 32       : ErrorCode -> ErrorCodeId.
 Coercion fromErrorCodeId := N2Bv_sized 32 : ErrorCodeId -> ErrorCode.
 
 Definition NoError            : ErrorCodeId :=  0.
@@ -104,75 +104,38 @@ Coercion PayloadLength2N := Bv2N 24       : PayloadLength -> N.
 Coercion N2PayloadLength := N2Bv_sized 24 : N -> PayloadLength.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6 *)
-Definition FrameTypeId    := N.
-Inductive FrameType :=
-  DataType                      (* 0x0 *)
-| HeadersType                   (* 0x1 *)
-| PriorityType                  (* 0x2 *)
-| RSTStreamType                 (* 0x3 *)
-| SettingsType                  (* 0x4 *)
-| PushPromiseType               (* 0x5 *)
-| PingType                      (* 0x6 *)
-| GoAwayType                    (* 0x7 *)
-| WindowUpdateType              (* 0x8 *)
-| ContinuationType              (* 0x9 *)
-| UnknownType : FrameTypeId -> FrameType.
-(* Extensions are permitted to define new frame types. (Section 5.5) *)
+Definition FrameTypeId   := N.
+Definition FrameType     := Bvector 8.
+Coercion   toFrameTypeId := Bv2N       8 : FrameType -> FrameTypeId.
+Coercion fromFrameTypeId := N2Bv_sized 8 : FrameTypeId -> FrameType.
+
+Definition DataType         : FrameTypeId := 0.
+Definition HeadersType      : FrameTypeId := 1.
+Definition PriorityType     : FrameTypeId := 2.
+Definition RSTStreamType    : FrameTypeId := 3.
+Definition SettingsType     : FrameTypeId := 4.
+Definition PushPromiseType  : FrameTypeId := 5.
+Definition PingType         : FrameTypeId := 6.
+Definition GoAwayType       : FrameTypeId := 7.
+Definition WindowUpdateType : FrameTypeId := 8.
+Definition ContinuationType : FrameTypeId := 9.
 
 (* Frames that can only be used in control frames (ID 0) *)
-Definition zeroFrameType (typ : FrameType) : bool :=
-  match typ with
-  | SettingsType => true
-  | PingType     => true
-  | GoAwayType   => true
-  | _            => false
-  end.
+Definition zeroFrameType (typ : FrameTypeId) : bool :=
+  List.existsb (N.eqb typ)
+               [SettingsType; PingType; GoAwayType].
 
 (* Frames that must be associated to a stream (ID <> 0).
    Equivalently, they cannot be used in control frames *)
-Definition nonZeroFrameType (typ : FrameType) : bool :=
-  match typ with
-  | DataType         => true
-  | HeadersType      => true
-  | PriorityType     => true
-  | RSTStreamType    => true
-  | PushPromiseType  => true
-  | ContinuationType => true
-  | _                => false
-  end.
-
-Coercion fromFrameTypeId (id : FrameTypeId) : FrameType :=
-  match id with
-  | 0 => DataType
-  | 1 => HeadersType
-  | 2 => PriorityType
-  | 3 => RSTStreamType
-  | 4 => SettingsType
-  | 5 => PushPromiseType
-  | 6 => PingType
-  | 7 => GoAwayType
-  | 8 => WindowUpdateType
-  | 9 => ContinuationType
-  | _ => UnknownType id
-  end.
-
-Coercion toFrameTypeId (type : FrameType) : FrameTypeId :=
-  match type with
-  | DataType         => 0
-  | HeadersType      => 1
-  | PriorityType     => 2
-  | RSTStreamType    => 3
-  | SettingsType     => 4
-  | PushPromiseType  => 5
-  | PingType         => 6
-  | GoAwayType       => 7
-  | WindowUpdateType => 8
-  | ContinuationType => 9
-  | UnknownType id   => id
-  end.
-
-Instance EquivFrameType : Equiv FrameType :=
-  { equiv := eq_equiv toFrameTypeId }.
+Definition nonZeroFrameType (typ : FrameTypeId) : bool :=
+  List.existsb (N.eqb typ)
+               [ DataType
+               ; HeadersType
+               ; PriorityType
+               ; RSTStreamType
+               ; PushPromiseType
+               ; ContinuationType
+               ].
 
 Inductive FrameFlags : FrameType -> Type :=
 | DataFlags
@@ -202,7 +165,7 @@ Inductive FrameFlags : FrameType -> Type :=
 | ContinuationFlags
     (END_HEADERS : Bit 2)
   : FrameFlags ContinuationType
-| UnknownFlags type : FrameFlags (UnknownType type)
+| UnknownFlags type : FrameFlags type
 .
 
 Definition testEndStream  : FrameFlagsField -> bool := BVnth 0.
@@ -226,7 +189,7 @@ Definition fromFrameFlagsField type (fff : FrameFlagsField) :
   | GoAwayType => GoAwayFlags
   | WindowUpdateType => WindowUpdateFlags
   | ContinuationType => ContinuationFlags (b _)
-  | UnknownType _ => UnknownFlags _
+  | _ => UnknownFlags _
   end.
 
 Definition toFrameFlagsField type (ff : FrameFlags type) :
