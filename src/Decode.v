@@ -54,10 +54,6 @@ Program Definition decodeFrameHeader {m : nat -> Tycon}
                         flags         := flags;
                         streamId      := streamId |}))%imonad.
 
-Next Obligation.
-apply ByteVector_upperbound.
-Qed.
-
 Program Definition checkFrameHeader {m : Tycon}
         `{Monad m} `{MonadExc HTTP2Error m}
         (settings : Settings) (typfrm : FrameType * FrameHeader) :

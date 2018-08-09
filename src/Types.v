@@ -24,6 +24,8 @@ Definition isResponse (v : StreamId) : bool := existsb id v && negb (hd v).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.5.3.2 *)
 Definition Weight := Bvector 8.
+Coercion Weight2N := Bv2N       8 : Weight -> N.
+Coercion N2Weight := N2Bv_sized 8 : N -> Weight.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.2 *)
 Definition HeaderBlockFragment := string.
@@ -38,20 +40,24 @@ Inductive Priority :=
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
 Definition SettingValue := Bvector 32.
 Definition SettingKey   := Bvector 16.
-Definition SettingHeaderTableSize      : SettingKey := N2Bv_sized 16 1.
-Definition SettingEnablePush           : SettingKey := N2Bv_sized 16 2.
-Definition SettingMaxConcurrentStreams : SettingKey := N2Bv_sized 16 3.
-Definition SettingInitialWindowSize    : SettingKey := N2Bv_sized 16 4.
-Definition SettingMaxFrameSize         : SettingKey := N2Bv_sized 16 5.
-Definition SettingMaxHeaderBlockSize   : SettingKey := N2Bv_sized 16 6.
+Definition SettingKeyId := N.
+Coercion SettingValue2N := Bv2N       32 : SettingValue -> N.
+Coercion N2SettingValue := N2Bv_sized 32 : N -> SettingValue.
+Coercion SettingKey2Id  := Bv2N       16 : SettingKey   -> SettingKeyId.
+Coercion Id2SettingKey  := N2Bv_sized 16 : SettingKeyId -> SettingKey.
+Definition SettingHeaderTableSize      : SettingKeyId := 1.
+Definition SettingEnablePush           : SettingKeyId := 2.
+Definition SettingMaxConcurrentStreams : SettingKeyId := 3.
+Definition SettingInitialWindowSize    : SettingKeyId := 4.
+Definition SettingMaxFrameSize         : SettingKeyId := 5.
+Definition SettingMaxHeaderBlockSize   : SettingKeyId := 6.
 
 (* Extensions are permitted to use new settings. (Section 5.5) *)
 Definition Setting  := SettingKey * SettingValue.
 Definition Settings := SettingKey -> SettingValue.
 
 Definition defaultSettings (key : SettingKey) : SettingValue :=
-  (N2Bv_sized 32)
-    match Bv2N 16 key with
+    match SettingKey2Id key with
     | 1 =>       4096              (* SettingHeaderTableSize   *)
     | 2 =>          1              (* SettingEnablePush        *)
     | 4 =>      65535              (* SettingInitialWindowSize *)
@@ -64,76 +70,38 @@ Definition WindowSize := Bvector 31.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.7 *)
 Definition ErrorCodeId := N.
-Inductive ErrorCode :=
-  NoError                       (* 0x0 *)
-| ProtocolError                 (* 0x1 *)
-| InternalError                 (* 0x2 *)
-| FlowControlError              (* 0x3 *)
-| SettingsTimeout               (* 0x4 *)
-| StreamClosed                  (* 0x5 *)
-| FrameSizeError                (* 0x6 *)
-| RefusedStream                 (* 0x7 *)
-| Cancel                        (* 0x8 *)
-| CompressionError              (* 0x9 *)
-| ConnectError                  (* 0xa *)
-| EnhanceYourCalm               (* 0xb *)
-| InadequateSecurity            (* 0xc *)
-| HTTP11Required                (* 0xd *)
-| UnknownErrorCode : ErrorCodeId -> ErrorCode.
-(* Extensions are permitted to use new error codes. (Section 5.5) *)
+Definition ErrorCode   := Bvector 32.
+Coercion toErrorCodeId   := Bv2N 32       : ErrorCode -> ErrorCodeId.
+Coercion fromErrorCodeId := N2Bv_sized 32 : ErrorCodeId -> ErrorCode.
 
-Coercion fromErrorCodeId (e:ErrorCodeId) : ErrorCode :=
-  match e with
-  | 0 => NoError
-  | 1 => ProtocolError
-  | 2 => InternalError
-  | 3 => FlowControlError
-  | 4 => SettingsTimeout
-  | 5 => StreamClosed
-  | 6 => FrameSizeError
-  | 7 => RefusedStream
-  | 8 => Cancel
-  | 9 => CompressionError
-  | 10 => ConnectError
-  | 11 => EnhanceYourCalm
-  | 12 => InadequateSecurity
-  | 13 => HTTP11Required
-  | w   => UnknownErrorCode w
-  end.
-
-Coercion toErrorCodeId (e:ErrorCode) : ErrorCodeId :=
-  match e with
-  | NoError              => 0
-  | ProtocolError        => 1
-  | InternalError        => 2
-  | FlowControlError     => 3
-  | SettingsTimeout      => 4
-  | StreamClosed         => 5
-  | FrameSizeError       => 6
-  | RefusedStream        => 7
-  | Cancel               => 8
-  | CompressionError     => 9
-  | ConnectError         => 10
-  | EnhanceYourCalm      => 11
-  | InadequateSecurity   => 12
-  | HTTP11Required       => 13
-  | (UnknownErrorCode w) => w
-  end.
-
-Instance EquivErrorCode : Equiv ErrorCode :=
-  { equiv := eq_equiv toErrorCodeId }.
+Definition NoError            : ErrorCodeId :=  0.
+Definition ProtocolError      : ErrorCodeId :=  1.
+Definition InternalError      : ErrorCodeId :=  2.
+Definition FlowControlError   : ErrorCodeId :=  3.
+Definition SettingsTimeout    : ErrorCodeId :=  4.
+Definition StreamClosed       : ErrorCodeId :=  5.
+Definition FrameSizeError     : ErrorCodeId :=  6.
+Definition RefusedStream      : ErrorCodeId :=  7.
+Definition Cancel             : ErrorCodeId :=  8.
+Definition CompressionError   : ErrorCodeId :=  9.
+Definition EnhanceYourCalm    : ErrorCodeId := 10.
+Definition InadequateSecurity : ErrorCodeId := 11.
+Definition HTTP11Required     : ErrorCodeId := 12.
 
 Inductive HTTP2Error :=
   ConnectionError : ErrorCode -> string   -> HTTP2Error
 | StreamError     : ErrorCode -> StreamId -> HTTP2Error.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
-Definition FrameFlagsField  := Bvector 8.
+Definition PayloadLength   := Bvector 24.
+Definition FrameFlagsField := Bvector 8.
 Inductive  FrameHeader :=
-  { payloadLength : {n : N | n < 16777216};
+  { payloadLength : PayloadLength;
     flags         : FrameFlagsField;
     streamId      : StreamId
   }.
+Coercion PayloadLength2N := Bv2N 24       : PayloadLength -> N.
+Coercion N2PayloadLength := N2Bv_sized 24 : N -> PayloadLength.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6 *)
 Definition FrameTypeId    := N.
