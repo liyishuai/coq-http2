@@ -129,7 +129,7 @@ Definition buildGoAway (sid:StreamId) (e:ErrorCode) (s:string) :=
 Definition buildWindowUpdate (ws:WindowSize) :=
   (* R *)
   (* Window Size Increment (31) *)
-  streamid_to_string false (N2Bv_sized 31 ws).
+  streamid_to_string false ws.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.10 *)
 Definition buildContinuation (hbf:HeaderBlockFragment) :=

@@ -6,7 +6,7 @@ From HTTP2 Require Import
      Util.Parser
      Util.VectorUtil
      Util.StringUtil.
-From Coq Require Import NArith.
+From Coq Require Import NArith Bvector.
 From ExtLib Require Import Functor Monad MonadExc.
 Import FunctorNotation MonadNotations.
 Import IMonadNotations.
@@ -18,12 +18,19 @@ Open Scope bool_scope.
 Open Scope N_scope.
 Open Scope monad_scope.
 
+Program Definition get31bit {m : nat -> Tycon}
+        `{IMonad_nat m} `{MParser byte (m 1%nat)} :
+  m 4%nat (bit * Bvector 31)%type :=
+  icast (
+    b <-(Bvector_of_ByteVector) iget_vec 4;;
+    let '(e, sid) := Vector_uncons b in
+    iret (e, sid))%imonad.
+
 Program Definition decode31bit {m : nat -> Tycon}
            `{IMonad_nat m} `{MParser byte (m 1%nat)} :
   m 4%nat (bit * N)%type :=
   icast (
-    b <-(Bvector_of_ByteVector) iget_vec 4;;
-    let '(e, sid) := Vector_uncons b in
+    '(e, sid) <- get31bit;;
     iret (e, Bv2N 31 sid))%imonad.
 
 Program Definition decodeStreamId {m : nat -> Tycon}
@@ -246,7 +253,7 @@ Definition decodeWindowUpdateFrame :
   FramePayloadDecoder WindowUpdateType :=
   fun _ _ _ _ n h =>
     (* n must be 4 *)
-    inc <-(snd) unindex decode31bit;;
+    inc <-(snd) unindex get31bit;;
     ret (WindowUpdateFrame inc).
 
 Definition decodeContinuationFrame :

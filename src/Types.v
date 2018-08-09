@@ -60,7 +60,7 @@ Definition defaultSettings (key : SettingKey) : SettingValue :=
     end.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.9 *)
-Definition WindowSize := N.
+Definition WindowSize := Bvector 31.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.7 *)
 Definition ErrorCodeId := N.
