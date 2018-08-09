@@ -297,14 +297,6 @@ Proof. reflexivity. Qed.
    :scheme: http
    :path: /
    :authority: www.example.com*)
-Example abc :
-  hex_bytes_to_binary ["41"; "8c"; "f1"; "e3"; "c2"; "e5"; "f2"; "3a";
-                         "6b"; "a0"; "ab"; "90"; "f4"; "ff"] =
-  string_to_binary
-    (pack_list_bool
-       (encode_HFR true
-                   (LHFIncrementIndexedName 1 "www.example.com"))).
-Proof. reflexivity. Qed.
 Example C4_1_encode :
   hex_bytes_to_binary ["82"; "86"; "84"; "41"; "8c"; "f1"; "e3"; "c2"; "e5";
                          "f2"; "3a"; "6b"; "a0"; "ab"; "90"; "f4"; "ff"] =
@@ -335,7 +327,7 @@ Example C4_2_encode :
   fold_left (fun acc b => acc ++ (string_to_binary b))
             (encode_HB true [IndexedHF 2; IndexedHF 6; IndexedHF 4;
                IndexedHF 62; LHFIncrementIndexedName 24 "no-cache"]) [].
-Proof. compute. reflexivity. Qed.
+Proof. reflexivity. Qed.
 
 Example C4_2_decode :
   decode_mult (hex_bytes_to_string ["82"; "86"; "84"; "be"; "58"; "86";
