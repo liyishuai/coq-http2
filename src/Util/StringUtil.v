@@ -11,6 +11,12 @@ Notation bytes := string.
 Infix ":::" := String
 (at level 60, right associativity) : string_scope.
 
+Fixpoint String_rev (s:string) : string :=
+  match s with
+  | EmptyString => s
+  | String a s' => append (String_rev s') (String a EmptyString)
+  end. 
+
 Fixpoint String_splitAt (n : nat) (s : string) : option (string * string) :=
   match n, s with
   | 0, _ => Some ("", s)

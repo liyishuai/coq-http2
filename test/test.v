@@ -10,7 +10,7 @@ From HTTP2 Require Import
      Util.ParserInstances
      Util.VectorUtil
      Util.StringUtil. 
-From Coq Require Import List BinNat String Ascii NArith Basics Bvector.
+From Coq Require Import Peano List BinNat String Ascii NArith Basics Bvector.
 From ExtLib Require Import Monads.
 Import MonadNotation.
 Import ListNotations.
@@ -371,11 +371,12 @@ Proof. reflexivity. Qed.
 (* Http2 sample dump:
    https://wiki.wireshark.org/HTTP2 *)
 
+Print WindowSize.
+
 Program Definition f21 : Frame :=
-  let fh := Build_FrameHeader 4 (Bvect_false 8) (N2Bv_gen 31 3) in
-  let fp := WindowUpdateFrame 32767 in
+  let fh := Build_FrameHeader (N2Bv_gen 24 4) (Bvect_false 8) (N2Bv_gen 31 3) in
+  let fp := WindowUpdateFrame (N2Bv_gen 31 32767) in
   Build_Frame fh WindowUpdateType fp.
-Obligation 1. reflexivity. Qed.
 
 Fixpoint string_to_ascii_list s : list ascii :=
   match s with
@@ -385,14 +386,12 @@ Fixpoint string_to_ascii_list s : list ascii :=
 
 Definition string_to_N_list s := List.map N_of_ascii (string_to_ascii_list s).
 
-Compute (encodeFrame None f21).
-
 Example encode_f21 :
   string_to_binary (encodeFrame None f21) =
   hex_bytes_to_binary ["00"; "00"; "04"; "08"; "00"; "00"; "00"; "00"; "03"; "00";
                          "00"; "7f"; "ff"].
-Proof. 
-
+Proof.  
+  
 Program Definition f4 : Frame :=
   let fh := Build_FrameHeader 6 (Bvect_false 8) (N2Bv_gen 31 0) in
   let fp := SettingsFrame ((SettingMaxConcurrentStreams, (N2Bv_gen 32 100)) :: nil) in
