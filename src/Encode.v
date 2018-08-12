@@ -23,7 +23,7 @@ Definition padding (p:option N) : string :=
   end.
 
 Program Definition streamid_to_vector (E:bool) (sid:StreamId) : ByteVector 4 :=
-  ByteVector_of_Bvector (E::sid).
+  ByteVector_of_Bvector (Bvector_tail_cons sid E).
 
 Definition streamid_to_string (E:bool) := to_string ∘ streamid_to_vector E.
 
@@ -39,7 +39,7 @@ Program Definition encodeFrameHeader (ft: FrameType) (fh: FrameHeader) : ByteVec
      ignored when receiving. *)
   (* Stream Identifier (31) *)
   let v_si := streamid_to_vector false (streamId fh) in
-  (append v_len (append v_ft (append v_flgs v_si))).
+  (append v_si (append v_flgs (append v_ft v_len))).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.1 *)
 Definition buildData (p:option N) (s:string) :=

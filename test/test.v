@@ -9,7 +9,8 @@ From HTTP2 Require Import
      Util.Parser
      Util.ParserInstances
      Util.VectorUtil
-     Util.StringUtil. 
+     Util.StringUtil
+     Decode. 
 From Coq Require Import Peano List BinNat String Ascii NArith Basics Bvector.
 From ExtLib Require Import Monads.
 Import MonadNotation.
@@ -106,9 +107,17 @@ Fixpoint string_to_binary (s:string) : list binary :=
     (N_to_binary 8) (N_of_ascii a) :: string_to_binary s'
   end.
 
+Fixpoint binary_to_string (bs:list binary) :=
+  match bs with
+  | [] => EmptyString
+  | a :: bs' =>
+    String (ascii_of_N (binary_to_N a)) (binary_to_string bs')
+  end.
+
 Fixpoint hex_bytes_to_binary (s:list string) : list binary := map hex s.
 Fixpoint hex_bytes_to_string (s:list string) : string :=
   fold_right String EmptyString (map (ascii_of_N ∘ binary_to_N ∘ hex) s).
+
 
 (** Hpack testing **)
 (* https://tools.ietf.org/html/rfc7541#appendix-C.1.1 *)
@@ -371,8 +380,6 @@ Proof. reflexivity. Qed.
 (* Http2 sample dump:
    https://wiki.wireshark.org/HTTP2 *)
 
-Print WindowSize.
-
 Program Definition f21 : Frame :=
   let fh := Build_FrameHeader (N2Bv_gen 24 4) (Bvect_false 8) (N2Bv_gen 31 3) in
   let fp := WindowUpdateFrame (N2Bv_gen 31 32767) in
@@ -390,62 +397,57 @@ Example encode_f21 :
   string_to_binary (encodeFrame None f21) =
   hex_bytes_to_binary ["00"; "00"; "04"; "08"; "00"; "00"; "00"; "00"; "03"; "00";
                          "00"; "7f"; "ff"].
-Proof.  
+Proof. reflexivity. Qed.
   
 Program Definition f4 : Frame :=
-  let fh := Build_FrameHeader 6 (Bvect_false 8) (N2Bv_gen 31 0) in
+  let fh := Build_FrameHeader (N2Bv_gen 24 6) (Bvect_false 8) (N2Bv_gen 31 0) in
   let fp := SettingsFrame ((SettingMaxConcurrentStreams, (N2Bv_gen 32 100)) :: nil) in
   Build_Frame fh SettingsType fp.
-Obligation 1. reflexivity. Qed.
 
-Compute encodeFrame None f4.
-(* "           d" *)
+Example encode_f4 :
+  string_to_binary (encodeFrame None f4) =
+  hex_bytes_to_binary ["00"; "00"; "06"; "04"; "00"; "00"; "00"; "00"; "00";
+                         "00"; "03"; "00"; "00"; "00"; "64"].
+Proof. reflexivity. Qed.
+
+Definition decode_fh := StateMonad.runStateT (run_parser decodeFrameHeader).
+Compute (decode_fh (hex_bytes_to_string ["00"; "00"; "06"; "04"; "00"; "00"; "00"; "00"; "00";
+                         "00"; "03"; "00"; "00"; "00"; "64"])).  
 
 Program Definition f13S : Frame :=
-  let fh := Build_FrameHeader 12 (Bvect_false 8) 0 in
-  let fp := SettingsFrame ((SettingHeaderTableSize, 0) ::
-                           (SettingHeaderTableSize, 4096) :: nil) in
+  let fh := Build_FrameHeader (N2Bv_gen 24 12) (Bvect_false 8) (N2Bv_gen 31 0) in
+  let fp := SettingsFrame ((SettingHeaderTableSize, (N2Bv_gen 32 0)) ::
+                           (SettingHeaderTableSize, (N2Bv_gen 32 4096)) :: nil) in
   Build_Frame fh SettingsType fp.
-Obligation 1. reflexivity. Qed.
 
-Compute encodeFrame None f13S.
-(* "                " *)
+Example encode_f13S :
+  string_to_binary (encodeFrame None f13S) =
+  hex_bytes_to_binary ["00"; "00"; "0c"; "04"; "00"; "00"; "00"; "00"; "00";
+                         "00"; "01"; "00"; "00"; "00"; "00"; "00"; "01"; "00";
+                           "00"; "10"; "00"].
+Proof. reflexivity. Qed.
 
-Program Definition f13H : Frame :=
-  let fh := Build_FrameHeader 39 [true; false; true; false; false; true; false; false] 3 in
-  let p := Build_Priority false 1 15 in
-  let hbf := fold_left (fun acc n => String (ascii_of_N n) acc)
-                       (192 :: 130 :: 4 :: 154 :: 98 :: 67 :: 145 :: 138 :: 71
-                            :: 85 :: 163 :: 161 :: 137 :: 211 :: 77 :: 12 :: 68
-                            :: 132 :: 141 :: 38 :: 35 :: 4 :: 66 :: 24 :: 76 :: 229
-                            :: 164 :: 171 :: 145 :: 8 :: 134 :: 191 :: 144
-                            :: 190 :: nil) "" in
+Open Scope vector_scope.
+Open Scope N_scope.
+Definition f13H : Frame :=
+  let fh := Build_FrameHeader (N2Bv_gen 24 39) [true; false; true; false;
+                                                  false; true; false; false]
+                              (N2Bv_gen 31 3) in
+  let p := Build_Priority false (N2Bv_gen 31 1) (N2Bv_gen 8 15) in
+  let hbf := hex_bytes_to_string ["c0"; "82"; "04"; "9a"; "62"; "43";
+                           "91"; "8a"; "47"; "55"; "a3"; "a1"; "89"; "d3"; "4d";
+                             "0c"; "44"; "84"; "8d"; "26"; "23"; "04"; "42"; "18";
+                               "4c"; "e5"; "a4"; "ab"; "91"; "08"; "86"; "bf";
+                                 "90"; "be"] in
   let fp := HeadersFrame (Some p) hbf in
   Build_Frame fh HeadersType fp.
-Obligation 1. reflexivity. Qed.
 
-Compute encodeFrame None f13H.
-(* String "000"
-         (String "000"
-            (String "'"
-               (String "001"
-                  (String "%"
-                     (String "000"
-                        (String "000"
-                           (String "000"
-                              (String "003"
-                                 (String "000"
-                                    (String "000"
-                                       (String "000"
-                                          (String "001"
-                                          (String "015"
-                                          (String "190"
-                                          (String "144"
-                                          (String "191"
-                                          (String "134"
-                                          (String "008"
-                                          (String "145"
-                                          (String "171"
-                                          (String "164"
-                                          (String "229"
-                                          (String "L" ...))))))))))))))))))))))) *)
+Example encode_f13H :
+  string_to_binary (encodeFrame None f13H) =
+  hex_bytes_to_binary ["00"; "00"; "27"; "01"; "25"; "00"; "00"; "00"; "03"; "00";
+                         "00"; "00"; "01"; "0f"; "c0"; "82"; "04"; "9a"; "62"; "43";
+                           "91"; "8a"; "47"; "55"; "a3"; "a1"; "89"; "d3"; "4d";
+                             "0c"; "44"; "84"; "8d"; "26"; "23"; "04"; "42"; "18";
+                               "4c"; "e5"; "a4"; "ab"; "91"; "08"; "86"; "bf";
+                                 "90"; "be"].
+Proof. reflexivity. Qed.

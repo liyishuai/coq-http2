@@ -24,3 +24,10 @@ Fixpoint ByteVector_of_Bvector {n : nat} : Bvector (n * 8) -> ByteVector n :=
       let (b7, v8) := Vector_uncons v7 in
       Ascii b0 b1 b2 b3 b4 b5 b6 b7::ByteVector_of_Bvector v8
   end.
+
+Fixpoint Bvector_tail_cons {n:nat} (v:Bvector n) (b:bool) : Bvector (n + 1) :=
+  match v with
+  | [] => [b]
+  |  a :: v' =>
+     a :: Bvector_tail_cons v' b
+  end.
