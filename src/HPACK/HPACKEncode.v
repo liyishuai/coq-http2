@@ -126,20 +126,6 @@ Definition encode_LHFNeverIndexNewName (H:bool) (s1:string)
 Definition encode_DTableSizeUpdate (i:N) : list bool :=
   false :: false :: true :: encode_N i 5.
 
-(* https://tools.ietf.org/html/rfc7541#section-6 *)
-(* H corresponds to whether huffman encoding is being used *)
-Definition encode_HFR (H:bool) (hfr:HeaderFieldRepresentation) : list bool :=
-  match hfr with
-  | IndexedHF i => encode_IndexedHF i
-  | LHFIncrementIndexedName i s2 => encode_LHFIncrementIndexedName i H s2
-  | LHFIncrementNewName s1 s2 => encode_LHFIncrementNewName H s1 s2
-  | LHFWithoutIndexIndexedName i s2 => encode_LHFWithoutIndexIndexedName i H s2
-  | LHFWithoutIndexNewName s1 s2 => encode_LHFWithoutIndexNewName H s1 s2
-  | LHFNeverIndexIndexedName i s2 => encode_LHFNeverIndexIndexedName i H s2
-  | LHFNeverIndexNewName s1 s2 => encode_LHFNeverIndexNewName H s1 s2
-  | DTableSizeUpdate i => encode_DTableSizeUpdate i
-  end.
-
 Fixpoint pack_list_bool (b:list bool) : string :=
   match b with
   | b7 :: b6 :: b5 :: b4 :: b3 :: b2 :: b1 :: b0 :: tl =>
@@ -147,6 +133,26 @@ Fixpoint pack_list_bool (b:list bool) : string :=
   | _ => ""
   end.
 
+(* https://tools.ietf.org/html/rfc7541#section-6 *)
+(* H corresponds to whether huffman encoding is being used *)
+Definition encode_HFR (H:bool) (hfr:HeaderFieldRepresentation) : string :=
+  pack_list_bool (match hfr with
+                  | IndexedHF i => encode_IndexedHF i
+                  | LHFIncrementIndexedName i s2 =>
+                    encode_LHFIncrementIndexedName i H s2
+                  | LHFIncrementNewName s1 s2 =>
+                    encode_LHFIncrementNewName H s1 s2
+                  | LHFWithoutIndexIndexedName i s2 =>
+                    encode_LHFWithoutIndexIndexedName i H s2
+                  | LHFWithoutIndexNewName s1 s2 =>
+                    encode_LHFWithoutIndexNewName H s1 s2
+                  | LHFNeverIndexIndexedName i s2 =>
+                    encode_LHFNeverIndexIndexedName i H s2
+                  | LHFNeverIndexNewName s1 s2 =>
+                    encode_LHFNeverIndexNewName H s1 s2
+                  | DTableSizeUpdate i => encode_DTableSizeUpdate i
+                  end).
+
 (* H corresponds to whether huffman encoding is being used *)
 Definition encode_HB  (H:bool) (hb: HeaderBlock) : string :=
-  fold_left String.append (map (pack_list_bool ∘ (encode_HFR H)) hb) "".
+  fold_left String.append (map (encode_HFR H) hb) "".

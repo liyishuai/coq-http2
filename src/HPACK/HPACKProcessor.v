@@ -8,16 +8,19 @@ Import MonadNotation.
 (* Takes a Header Field Representation (which is part of a Header Block) and 
    a dynamic table, and processes the hfr, returning either an error,
    or a potentially mutated dynamic table. *)
-Definition processHFR {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
-           (hfr:HeaderFieldRepresentation) (dynamic_table:DTable) : m DTable :=
+Definition process_HFR `{Monad Err} `{MonadExc HPACKError Err}
+           (hfr:HeaderFieldRepresentation) (dynamic_table:DTable) : Err (option HeaderField * DTable) :=
   match hfr with
   | LHFIncrementIndexedName x s2 =>
-    s <- index_into_tables x dynamic_table ;;
-    ret (add_dtable_entry dynamic_table (fst s, s2))
+    s <- index_into_tables x dynamic_table;;
+    ret (Some (fst s, s2), (add_dtable_entry dynamic_table (fst s, s2)))
   | LHFIncrementNewName s1 s2 =>
-    ret (add_dtable_entry dynamic_table (s1, s2))
-  | DTableSizeUpdate x => ret (change_dtable_size x dynamic_table)
-  | IndexedHF _ | LHFWithoutIndexIndexedName _ _
-  | LHFWithoutIndexNewName _ _ | LHFNeverIndexIndexedName _ _
-  | LHFNeverIndexNewName _ _ => ret dynamic_table
+    ret (Some (s1, s2), (add_dtable_entry dynamic_table (s1, s2)))
+  | DTableSizeUpdate x => ret (None, (change_dtable_size x dynamic_table))
+  | IndexedHF x => s <- index_into_tables x dynamic_table;; ret (Some s, dynamic_table)
+  | LHFWithoutIndexIndexedName x s2 | LHFNeverIndexIndexedName x s2 =>
+    s <- index_into_tables x dynamic_table;;
+    ret (Some (fst s, s2), dynamic_table)
+  | LHFWithoutIndexNewName s1 s2 | LHFNeverIndexNewName s1 s2 =>
+                                   ret (Some (s1, s2), dynamic_table)
   end.

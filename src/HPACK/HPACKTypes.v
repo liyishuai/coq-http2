@@ -63,3 +63,5 @@ Inductive HPACKError :=
 | IllegalHeaderName : HPACKError
 | IntegerOverflow : HPACKError (* Integer is too large to encode *)
 | HeaderBlockOverflow : HPACKError (* Too many headers in header block *).
+
+Definition Err := sum HPACKError.

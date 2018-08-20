@@ -76,8 +76,8 @@ Definition static_table : Table :=
     ("www-authenticate", "")].
 
 (* https://tools.ietf.org/html/rfc7541#section-2.3.3 *)
-Definition index_into_tables {m:Tycon} `{Monad m} `{MonadExc HPACKError m} (i:N)
-           (dynamic_table:DTable) : m HeaderField :=
+Definition index_into_tables `{Monad Err} `{MonadExc HPACKError Err} (i:N)
+           (dynamic_table:DTable) : Err HeaderField :=
   if i =? 0 then raise (IndexOverrun i)
   else if i <=? N.of_nat (length static_table)
        then opt_err (IndexOverrun i)
@@ -94,7 +94,7 @@ Definition eqb_hf (s1 s2:HeaderField) : bool :=
                                   (if string_dec ss1 ss2 then true else false)
   end.
 
-Definition find_table_h (h:HeaderField) (t:Table) : option N :=
+Definition find_table (h:HeaderField) (t:Table) : option N :=
   let fix loop i l :=
       match l with
       | [] => None 
@@ -102,16 +102,6 @@ Definition find_table_h (h:HeaderField) (t:Table) : option N :=
         if eqb_hf h a then Some i else loop (N.succ i) (tl)
       end in
   loop 1 t.
-
-Definition find_table (h:HeaderField) (dynamic_table:DTable) : option N :=
-  match (find_table_h h static_table) with
-  | None =>
-    match (find_table_h h (snd dynamic_table)) with
-    | None => None
-    | Some x => Some (x + N.of_nat (length static_table))
-    end
-  | Some x => Some x
-  end.
 
 (* The size of an entry is the sum of its name's length in octets (as defined in
    https://tools.ietf.org/html/rfc7541#section-5.2), its value's length in 
