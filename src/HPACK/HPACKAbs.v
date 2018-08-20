@@ -23,5 +23,5 @@ Module Type HPACK.
   Parameter decodeHeader : Monad Err -> MonadExc HPACKError Err -> DTable -> string ->
                            Err (HeaderList * DTable).
 
-  Parameter newDTable : Monad Err -> MonadExc HPACKError Err -> N -> Err DTable.
+  Parameter newDTable : Monad Err -> MonadExc HPACKError Err -> N -> N -> Err DTable.
 End HPACK.

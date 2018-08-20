@@ -50,6 +50,7 @@ Module HPACKImpl : HPACK.
                         end, snd d)) hb (ret ([], dtable))
     end.
 
-  Definition newDTable `{Monad Err} `{MonadExc HPACKError Err} (n:N) : Err DTable :=
-    if n <? 32 then raise TooSmallTableSize else ret (n, []).
+  Definition newDTable `{Monad Err} `{MonadExc HPACKError Err} (size:N) (max:N) : Err DTable :=
+    if negb (size <=? max) then raise TooLargeTableSize
+    else if size <? 32 then raise TooSmallTableSize else ret (size, max, []).
 End HPACKImpl.

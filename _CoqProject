@@ -17,5 +17,6 @@ src/HPACK/HPACKEncode.v
 src/HPACK/HPACKDecode.v
 src/HPACK/HPACKProcessor.v
 src/HPACK/HPACKAbs.v
+src/HPACK/HPACKImpl.v
 proxy/AppType.v
 proxy/GenericServerType.v

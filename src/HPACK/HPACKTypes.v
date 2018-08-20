@@ -17,11 +17,14 @@ Definition HeaderField := (string * string)%type.
       contexts. *)
 Definition Table := list HeaderField.
 
-(* Dynamic Tables are a pair of a maximum size and a table. The convention is
-   that the table has size (as defined in 
+(* Dynamic Tables are a triple of a size, a maximum size and a table. 
+   The maximum size is provided by the SETTINGS_HEADER_TABLE_SIZE, 
+   https://tools.ietf.org/html/rfc7540#section-6.5.2
+   The default value for the maximum size is 4096.
+   The convention is that the table has size (as defined in 
    https://tools.ietf.org/html/rfc7541#section-4.1) less than or equal to the
-   maximum size.  *)
-Definition DTable := (N * Table)%type.
+   maximum size, which is enforced by the functions that add entries.  *)
+Definition DTable := (N * N * Table)%type.
 
 (* Header List:  A header list is an ordered collection of header fields
       that are encoded jointly and can contain duplicate header fields.

@@ -128,7 +128,7 @@ Qed.
 
 Program Fixpoint dtable_entry_eviction (dynamic_table:DTable)
         {measure (length (snd dynamic_table))}: DTable :=
-  match size_dtable dynamic_table <=? fst dynamic_table with
+  match size_dtable dynamic_table <=? fst (fst dynamic_table) with
   | true => dynamic_table
   | false => dtable_entry_eviction (fst dynamic_table,
                                    removelast (snd dynamic_table))
@@ -136,13 +136,13 @@ Program Fixpoint dtable_entry_eviction (dynamic_table:DTable)
 Obligation 1.
   symmetry in Heq_anonymous; rewrite N.leb_gt in Heq_anonymous.
   destruct dynamic_table; destruct t.
-  - simpl in *. compute in Heq_anonymous; destruct n; inversion Heq_anonymous.
-  - cut (snd (n, h :: t) <> []); intros; try solve [simpl; congruence].
+  - simpl in *. compute in Heq_anonymous. destruct p; destruct n; inversion Heq_anonymous.
+  - cut (snd (p, h :: t) <> []); intros; try solve [simpl; congruence].
     apply removelast_decreasing; auto.
 Defined.
 
 Definition change_dtable_size (i:N) (dynamic_table:DTable) : DTable :=
-  dtable_entry_eviction (i, snd dynamic_table).
+  dtable_entry_eviction (i, snd (fst dynamic_table), snd dynamic_table).
 
 Definition cons_dtable (entry:HeaderField) (dynamic_table:DTable) : DTable :=
   (fst dynamic_table, entry :: snd dynamic_table).
@@ -153,9 +153,9 @@ Definition add_dtable_entry (dynamic_table:DTable) (entry:HeaderField)
      if table is non empty and adding element pushes table over max size), add
      entry to table, and finally evict entries if table is now too large 
      (removes just entry added only when entry is larger than max table size) *)
-  let evict1 := change_dtable_size (fst dynamic_table - size_hf entry)
+  let evict1 := change_dtable_size (fst (fst dynamic_table) - size_hf entry)
                                    dynamic_table in
-  (change_dtable_size (fst dynamic_table)) (cons_dtable entry evict1).
+  (change_dtable_size (fst (fst dynamic_table))) (cons_dtable entry evict1).
 
 (* Maps an ascii (+ 256) to a huffman encoded binary number *)
 Definition huffman_table : list (N * list bool) :=

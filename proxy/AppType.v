@@ -10,5 +10,5 @@ Module Type AppType (codec:HPACK).
 
   Definition APP := state app_state.
 
-  Parameter execute : string -> APP (optionE string).
+  Parameter execute : Frame -> APP (optionE Frame).
 End AppType.
