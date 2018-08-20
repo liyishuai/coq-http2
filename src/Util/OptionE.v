@@ -1,14 +1,23 @@
-From HTTP2 Require Import Types.
-From ExtLib Require Import Monad.
+Require Import Coq.Strings.String.
+Require Import ExtLib.Structures.Monads.
 
-Open Scope type_scope.
+Inductive optionE (X:Type) : Type :=
+  | Success : X -> optionE X
+  | Failure : string -> optionE X.
 
-Definition OptionE T := HTTP2Error + T.
-Instance MonadOptionE : Monad OptionE :=
-  {| ret := @inr HTTP2Error;
-     bind _ _ ot f :=
-       match ot with
-       | inl e => inl e
-       | inr t => f t
-       end
-  |}.
+Arguments Success {X}.
+Arguments Failure {X}.
+
+Instance Monad_optionE : Monad optionE :=
+  { ret A x := Success x;
+    bind A B a f := match a with
+                    | Success a' => f a'
+                    | Failure e => Failure e
+                    end }.
+
+Instance Exception_optionE : MonadExc string (optionE) :=
+  { raise A x := Failure x;
+    catch A e f := match e with
+                   | Failure e => f e
+                   | a => a
+                   end }.

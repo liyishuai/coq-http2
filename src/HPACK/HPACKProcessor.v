@@ -1,5 +1,5 @@
-From HTTP2.HPACK Require Import HPACKTypes HPACKTables.
-From HTTP2.Util Require Import Parser.
+From HTTP2.src.HPACK Require Import HPACKTypes HPACKTables.
+From HTTP2.src.Util Require Import Parser.
 From Coq Require Import Basics.
 From ExtLib Require Import Monads.
 Import MonadNotation.

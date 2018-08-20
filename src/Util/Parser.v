@@ -5,7 +5,7 @@ From ExtLib Require Import
      Structures.MonadExc
      Structures.Monoid.
 Import MonadNotation.
-From HTTP2 Require Import
+From HTTP2.src Require Import
      Types
      Util.ByteVector
      Util.StringUtil.

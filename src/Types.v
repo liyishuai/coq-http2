@@ -6,7 +6,7 @@ From Coq Require Import
      String
      Vector
      micromega.Psatz.
-From HTTP2 Require Import
+From HTTP2.src Require Import
      Equiv
      Util.BitField
      Util.BitVector

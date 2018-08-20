@@ -1,5 +1,5 @@
 From Coq Require Import Ascii Bvector NArith String.
-From HTTP2 Require Import Util.ByteVector Util.VectorUtil.
+From HTTP2.src Require Import Util.ByteVector Util.VectorUtil.
 Open Scope string_scope.
 
 Fixpoint Bvector_of_ByteVector {n : nat} (v : ByteVector n) : Bvector (n * 8) :=

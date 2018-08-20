@@ -1,4 +1,5 @@
 From Coq Require Import Strings.String BinNat List.
+From ExtLib Require Import Monad.
 
 (* https://tools.ietf.org/html/rfc7541#section-1.3 *)
 (* Header Field:  A name-value pair.  Both the name and value are
@@ -26,7 +27,7 @@ Definition DTable := (N * Table)%type.
       that are encoded jointly and can contain duplicate header fields.
       A complete list of header fields contained in an HTTP/2 header
       block is a header list. *)
-Definition HeaderList := list string.
+Definition HeaderList := list HeaderField.
 
 (* https://tools.ietf.org/html/rfc7541#section-6 *)
 (* Header Field Representation:  A header field can be represented in
@@ -50,5 +51,15 @@ Definition HeaderBlock := list HeaderFieldRepresentation.
 
 (* Error type for HPACK *)
 Inductive HPACKError :=
-| processError : string -> HPACKError
-| decodeError : string -> HPACKError.
+| IndexOverrun : N -> HPACKError (* Index is out of range *)
+| EosInTheMiddle : HPACKError (* Eos appears in the middle of huffman string *)
+| IllegalEos : HPACKError (* Non-eos appears in the end of huffman string *)
+| TooLongEos : HPACKError	(* Eos of huffman string is more than 7 bits *)
+| EmptyEncodedString : HPACKError (* Encoded string has no length *)
+| TooSmallTableSize : HPACKError (* A peer set the dynamic table size less than 32 *)
+| TooLargeTableSize : HPACKError (* A peer tried to change the dynamic table size over the limit *)
+| IllegalTableSizeUpdate : HPACKError (* Table size update at the non-beginning *)
+| HeaderBlockTruncated : HPACKError	 
+| IllegalHeaderName : HPACKError
+| IntegerOverflow : HPACKError (* Integer is too large to encode *)
+| HeaderBlockOverflow : HPACKError (* Too many headers in header block *).

@@ -1,5 +1,5 @@
-From HTTP2.HPACK Require Import HPACKTypes.
-From HTTP2 Require Import Types Util.Parser.
+From HTTP2.src.HPACK Require Import HPACKTypes.
+From HTTP2.src Require Import Types Util.Parser.
 From Coq Require Import Strings.String BinNat Lists.List Basics.
 From ExtLib Require Import Monad MonadExc.
 Import ListNotations MonadNotation.
@@ -78,11 +78,11 @@ Definition static_table : Table :=
 (* https://tools.ietf.org/html/rfc7541#section-2.3.3 *)
 Definition index_into_tables {m:Tycon} `{Monad m} `{MonadExc HPACKError m} (i:N)
            (dynamic_table:DTable) : m HeaderField :=
-  if i =? 0 then raise (processError "0 is an invalid index")
+  if i =? 0 then raise (IndexOverrun i)
   else if i <=? N.of_nat (length static_table)
-       then opt_err (processError "Index not in static table")
+       then opt_err (IndexOverrun i)
                     (nth_error static_table (N.to_nat i))
-       else opt_err (processError "Index not in dynamic table")
+       else opt_err (IndexOverrun i)
                     (nth_error (snd dynamic_table)
                                (N.to_nat i - (length static_table + 1))%nat).
 
@@ -103,15 +103,14 @@ Definition find_table_h (h:HeaderField) (t:Table) : option N :=
       end in
   loop 1 t.
 
-Definition find_table {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
-           (h:HeaderField) (dynamic_table:DTable) : m N :=
+Definition find_table (h:HeaderField) (dynamic_table:DTable) : option N :=
   match (find_table_h h static_table) with
   | None =>
     match (find_table_h h (snd dynamic_table)) with
-    | None => raise (processError "Header Field not in any table")
-    | Some x => ret (x + N.of_nat (length static_table))
+    | None => None
+    | Some x => Some (x + N.of_nat (length static_table))
     end
-  | Some x => ret x
+  | Some x => Some x
   end.
 
 (* The size of an entry is the sum of its name's length in octets (as defined in

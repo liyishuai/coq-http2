@@ -1,5 +1,5 @@
 From Coq Require Import Ascii Basics NArith String Vector.
-From HTTP2.Util Require Import StringUtil.
+From HTTP2.src.Util Require Import StringUtil.
 Import VectorNotations.
 Open Scope program_scope.
 Open Scope string_scope.

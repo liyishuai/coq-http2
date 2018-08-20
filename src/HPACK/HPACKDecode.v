@@ -1,5 +1,5 @@
 From Coq Require Import String BinNat Ascii BinNatDef Vector List.
-From HTTP2 Require Import
+From HTTP2.src Require Import
      Equiv
      Types
      Util.BitVector
@@ -7,7 +7,7 @@ From HTTP2 Require Import
      Util.Parser
      Util.VectorUtil
      Util.StringUtil. 
-From HTTP2.HPACK Require Import HPACKTypes HPACKTables.
+From HTTP2.src.HPACK Require Import HPACKTypes HPACKTables.
 From ExtLib Require Import Monads.
 Import MonadNotation.
 Import ListNotations.
@@ -36,7 +36,7 @@ else
 Fixpoint decode_integer_h {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            `{MParser byte m} (fuel:nat) (M:N) : m N :=
   match fuel with
-  | O =>  raise (decodeError "Integer value too large")
+  | O =>  raise IntegerOverflow
   | S fuel' => a <- get_byte ;;
             let B := (N_of_ascii a) in
             let I := (BinNatDef.N.land B 127) * 2^M in
@@ -94,7 +94,7 @@ Fixpoint decode_hstring_h {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
   match s with
   | EmptyString =>
     if PeanoNat.Nat.ltb (length buffer) 8 && fold_left (fun acc b => b && acc) buffer true
-    then ret "" else raise (decodeError "Unexpected huffman ascii at end of string")
+    then ret "" else raise EmptyEncodedString
   | String a s' =>
     match a with
     | Ascii b7 b6 b5 b4 b3 b2 b1 b0 =>
@@ -107,7 +107,7 @@ Fixpoint decode_hstring_h {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
       match lookup buffer' with
       | None => decode_hstring_h buffer' s'
       | Some (a, l) =>
-        if a =? 256 then raise (decodeError "Premature end of string in huffman")
+        if a =? 256 then raise EosInTheMiddle
         else
           match lookup l with
           | None =>
@@ -183,14 +183,13 @@ Definition decode_HFR {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
 Fixpoint decode_HB_h {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
          `{MParser byte m} (n:nat) : m HeaderBlock :=
   match n with
-  | O => raise (decodeError "Too many headers in header block")
+  | O => raise HeaderBlockOverflow
   | S n' =>
     h <- decode_HFR;;
     hs <- catch (decode_HB_h n') (fun e =>
                             match e with
-                            | decodeError s =>
-                              if string_dec s "not enough bytes"
-                              then ret [] else raise e
+                            | HeaderBlockTruncated =>
+                              ret []
                             | _ => raise e
                             end);;
     ret (h :: hs)
@@ -198,4 +197,4 @@ Fixpoint decode_HB_h {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
 
 Definition decode_HB {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            `{MParser byte m} : m HeaderBlock :=
-  decode_HB_h 100.
+  decode_HB_h 1000.

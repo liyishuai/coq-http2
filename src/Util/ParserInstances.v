@@ -11,7 +11,7 @@ From ExtLib Require Import
      Structures.MonadTrans
      Structures.Monoid.
 Import MonadNotation.
-From HTTP2 Require Import
+From HTTP2.src Require Import
      HPACK.HPACKTypes
      Types
      Util.ByteVector
@@ -102,7 +102,7 @@ Instance MParser_HPACK_parser : MParser byte HPACK_parser := {
     s <- MonadState.get;;
     match s with
     | "" =>
-      lift (inl (decodeError "not enough bytes"))
+      lift (inl HeaderBlockTruncated)
     | c ::: s => MonadState.put s;; ret c
     end
   )%monad;

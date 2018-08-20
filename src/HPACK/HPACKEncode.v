@@ -1,4 +1,4 @@
-From HTTP2.HPACK Require Import HPACKTypes HPACKTables.
+From HTTP2.src.HPACK Require Import HPACKTypes HPACKTables.
 From Coq Require Import BinNat List Logic String Ascii Basics Recdef.
 Import ListNotations.
 Require Coq.Program.Tactics.
@@ -148,5 +148,5 @@ Fixpoint pack_list_bool (b:list bool) : string :=
   end.
 
 (* H corresponds to whether huffman encoding is being used *)
-Definition encode_HB  (H:bool) (hb: HeaderBlock) : HeaderList :=
-  map (pack_list_bool ∘ (encode_HFR H)) hb.
+Definition encode_HB  (H:bool) (hb: HeaderBlock) : string :=
+  fold_left String.append (map (pack_list_bool ∘ (encode_HFR H)) hb) "".

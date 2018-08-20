@@ -398,7 +398,16 @@ Example encode_f21 :
   hex_bytes_to_binary ["00"; "00"; "04"; "08"; "00"; "00"; "00"; "00"; "03"; "00";
                          "00"; "7f"; "ff"].
 Proof. reflexivity. Qed.
-  
+
+Print decodeFrameHeader.
+Print run_parser.
+Print parser.
+Definition decode_fh := StateMonad.runStateT (run_parser decodeFrameHeader).
+Check decode_fh.
+Compute (hex_bytes_to_string ["00"; "00"; "06"; "04"; "00"; "00"; "00";
+                                           "00"; "00"]).
+Definition f := decode_fh .
+
 Program Definition f4 : Frame :=
   let fh := Build_FrameHeader (N2Bv_gen 24 6) (Bvect_false 8) (N2Bv_gen 31 0) in
   let fp := SettingsFrame ((SettingMaxConcurrentStreams, (N2Bv_gen 32 100)) :: nil) in
@@ -410,9 +419,7 @@ Example encode_f4 :
                          "00"; "03"; "00"; "00"; "00"; "64"].
 Proof. reflexivity. Qed.
 
-Definition decode_fh := StateMonad.runStateT (run_parser decodeFrameHeader).
-Compute (decode_fh (hex_bytes_to_string ["00"; "00"; "06"; "04"; "00"; "00"; "00"; "00"; "00";
-                         "00"; "03"; "00"; "00"; "00"; "64"])).  
+
 
 Program Definition f13S : Frame :=
   let fh := Build_FrameHeader (N2Bv_gen 24 12) (Bvect_false 8) (N2Bv_gen 31 0) in
