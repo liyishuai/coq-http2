@@ -7,7 +7,9 @@ Import MonadNotation.
 Import ListNotations.
 
 Module HPACKImpl : HPACK.
-  Definition encodeHeader `{Monad Err} `{MonadExc HPACKError Err} (es:EncodeStrategy)
+  Definition H1 : Monad Err. typeclasses eauto. Defined.
+  Definition H2 : MonadExc HPACKError Err. typeclasses eauto. Defined.
+  Definition encodeHeader (es:EncodeStrategy)
              (dtable:DTable) (hl:HeaderList) : Err (string * DTable) :=
     let f hf :=
         match es with
@@ -36,7 +38,7 @@ Module HPACKImpl : HPACK.
                  d <- process_HFR hfr (snd v);;
                  ret (fst v ++ encode_HFR H hfr, snd d)) hl (ret ("", dtable)).
 
-  Definition decodeHeader `{Monad Err} `{MonadExc HPACKError Err} (dtable:DTable) (s:string)
+  Definition decodeHeader (dtable:DTable) (s:string)
     : Err (HeaderList * DTable) :=
     match StateMonad.runStateT (run_HPACK_parser decode_HB) s with
     | inl e => inl e
@@ -50,7 +52,7 @@ Module HPACKImpl : HPACK.
                         end, snd d)) hb (ret ([], dtable))
     end.
 
-  Definition newDTable `{Monad Err} `{MonadExc HPACKError Err} (size:N) (max:N) : Err DTable :=
+  Definition newDTable (size:N) (max:N) : Err DTable :=
     if negb (size <=? max) then raise TooLargeTableSize
     else if size <? 32 then raise TooSmallTableSize else ret (size, max, []).
 End HPACKImpl.

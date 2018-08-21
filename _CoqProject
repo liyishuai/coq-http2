@@ -20,3 +20,4 @@ src/HPACK/HPACKAbs.v
 src/HPACK/HPACKImpl.v
 proxy/AppType.v
 proxy/GenericServerType.v
+proxy/Proxy.v
