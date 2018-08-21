@@ -11,6 +11,9 @@ Notation bytes := string.
 Infix ":::" := String
 (at level 60, right associativity) : string_scope.
 
+Definition string_beq (s1 s2:string) : bool :=
+  if string_dec s1 s2 then true else false.
+
 Fixpoint String_rev (s:string) : string :=
   match s with
   | EmptyString => s
@@ -27,6 +30,19 @@ Fixpoint String_splitAt (n : nat) (s : string) : option (string * string) :=
     | None => None
     end
   end.
+
+Fixpoint String_splitAtSub (sub s:string) : option (string * string) :=
+  match sub, s with
+  | "", _ => Some ("", s)
+  | _, "" => None
+  | String a sub', String b s' =>
+    if ascii_dec a b then String_splitAtSub sub' s'
+    else match String_splitAtSub sub s' with
+         | None => None
+         | Some (s1, s2) => Some (String b s1, s2)
+         end
+  end.
+                                
 
 Lemma String_splitAt_lengthSome (n : nat) (s : string) :
   n <= length s <->

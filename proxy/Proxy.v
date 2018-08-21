@@ -1,6 +1,7 @@
 From HTTP2.proxy Require Import AppType.
 From HTTP2.src.HPACK Require Import HPACKAbs HPACKTypes.
-From HTTP2.src Require Import Types Util.OptionE.
+From HTTP2.src Require Import Types.
+From HTTP2.src.Util Require Import OptionE StringUtil.
 Require Import String BinNat.
 Require Import ExtLib.Data.Monads.StateMonad.
 Open Scope string_scope.
@@ -37,6 +38,34 @@ Module Proxy (codec:HPACK) : AppType codec.
         forwarded, so these must be handled. Settings frames are forwarded, but
         also processed? *)
   Definition execute (f:Frame) : APP (optionE Frame) :=
+    let decode s app_s :=
+        let '(setts, oauth, cont, cctxt, dctxt, buff) := app_s in
+        match codec.decodeHeader dctxt s with
+        | inl _ => (Failure "COMPRESSION_ERROR", app_s)
+        | inr (hl, dctxt') =>
+          let find s := SetoidList.findA (string_beq s) hl in 
+          match find ":method" with
+          | None => (Failure "Non connect header received", app_s)
+          | Some s =>
+            if string_beq s "CONNECT"
+            then
+              match find ":scheme", find ":path" with
+              | None, None =>
+                match find ":authority" with
+                | None => (Failure "No authority for connect method", app_s)
+                | Some s =>
+                  match String_splitAtSub ":" s with
+                  | None => (Failure "Authority port not seperated by colon", app_s)
+                  | Some (s1, s2) =>
+                    (Failure "TODO: send a Headers with 2xx status code",
+                     (setts, Some (s1, s2), false, cctxt, dctxt', ""))
+                  end
+                end
+              | _, _ => (Failure "scheme or path sent in connect", app_s)
+              end
+            else (Failure "Non connect method received", app_s)
+          end
+        end in
     mkState (fun app_s:app_state =>
                let '(setts, oauth, cont, cctxt, dctxt, buff) := app_s in
                match oauth with
@@ -48,8 +77,7 @@ Module Proxy (codec:HPACK) : AppType codec.
                      let flags := flags (frameHeader f) in
                      if testEndHeaders flags
                      then (* No more continuation expected. Decode here *)
-                       let s := buff ++ hbf in
-                       (Failure "Unimplemented", app_s)
+                       decode (buff ++ hbf) app_s
                      else (* Continuation expected, add hbf to buffer and set cont *)
                        (Failure "Not sure what to do here. Is it acknowledged somehow?",
                         (setts, oauth, true, cctxt, dctxt, buff ++ hbf))
@@ -61,7 +89,7 @@ Module Proxy (codec:HPACK) : AppType codec.
                      let flags := flags (frameHeader f) in
                      if testEndHeaders flags
                      then (* No continuation expected. Decode right away *)
-                       (Failure "Unimplemented", app_s)
+                       decode hbf app_s
                      else (* Continuation expected, add hbf to buffer and set cont *)
                        (Failure "Not sure what to do here. Is it acknowledged somehow?",
                         (setts, oauth, true, cctxt, dctxt, hbf))
