@@ -1,7 +1,7 @@
 From HTTP2.proxy Require Import AppType.
 From HTTP2.src.HPACK Require Import HPACKAbs HPACKTypes.
 From HTTP2.src Require Import Types.
-From HTTP2.src.Util Require Import OptionE StringUtil.
+From HTTP2.src.Util Require Import OptionE StringUtil BitField.
 Require Import String BinNat List Bvector.
 Require Import ExtLib.Data.Monads.StateMonad.
 Import ListNotations.
@@ -40,6 +40,20 @@ Module Proxy (codec:HPACK) : AppType codec.
         forwarded, so these must be handled. Settings frames are forwarded, but
         also processed? *)
   Definition execute (f:Frame) : APP (optionE Frame) :=
+    (* Form a goaway frame for connection errors *)
+    let goaway lsid e :=
+        let fp := GoAwayFrame lsid e "" in
+        let fh := Build_FrameHeader (framePayloadLength fp)
+                                    (toFrameFlagsField GoAwayType GoAwayFlags)
+                                    (Ndigits.N2Bv_gen 31 0) in
+        Build_Frame fh GoAwayType fp in
+    (* Form an rst frame for stream errors *)
+    let rst sid e :=
+        let fp := RSTStreamFrame e in
+        let fh := Build_FrameHeader (framePayloadLength fp)
+                                    (toFrameFlagsField RSTStreamType RSTStreamFlags)
+                                    sid in
+        Build_Frame fh RSTStreamType fp in
     (* Helper function that handles when the full encoded header block is received.
        The proxy expects a connect method, see 
        https://http2.github.io/http2-spec/#CONNECT *)
@@ -48,7 +62,7 @@ Module Proxy (codec:HPACK) : AppType codec.
         (* s is ready to be decoded. The spec says decoding errors MUST be treated
            as a COMPRESSION_ERROR: https://http2.github.io/http2-spec/#HeaderBlock *)
         match codec.decodeHeader dctxt s with
-        | inl _ => (Failure "COMPRESSION_ERROR", app_s)
+        | inl _ => (Success (goaway (streamId (frameHeader f)) CompressionError), app_s)
         | inr (hl, dctxt') =>
           (* hl is the decoded header list received by the proxy *)
           let find s := SetoidList.findA (string_beq s) hl in
@@ -59,6 +73,8 @@ Module Proxy (codec:HPACK) : AppType codec.
           | Some s =>
             if string_beq s "CONNECT"
             then
+              (* Malformed connect requests are treated as a stream error.
+                 An RST stream frame is sent including a PROTOCOL_ERROR *)
               (* According to https://http2.github.io/http2-spec/#CONNECT the
                  :scheme and :path pseudo headers MUST be omitted *)
               match find ":scheme", find ":path" with
@@ -67,10 +83,10 @@ Module Proxy (codec:HPACK) : AppType codec.
                    :authority pseudo header contains the host and port to connect
                    to, host seperated from port by colon *)
                 match find ":authority" with
-                | None => (Failure "No authority for connect method", app_s)
+                | None => (Success (rst (streamId (frameHeader f)) ProtocolError), app_s)
                 | Some s =>
                   match String_splitAtSub ":" s with
-                  | None => (Failure "Authority port not seperated by colon", app_s)
+                  | None => (Success (rst (streamId (frameHeader f)) ProtocolError), app_s)
                   | Some (s1, s2) =>
                     (* Once this connection is successfully established, the 
                        proxy sends a HEADERS frame containing a 2xx series status 
@@ -81,14 +97,17 @@ Module Proxy (codec:HPACK) : AppType codec.
                     | inr (hbf, cctxt') =>
                       let fp := HeadersFrame None hbf in
                       let fh := Build_FrameHeader (framePayloadLength fp)
-                                                  (toFrameFlagsField GoAwayType GoAwayFlags)
-                                                  (Ndigits.N2Bv_gen 31 0) in
+                                                  (toFrameFlagsField
+                                                     HeadersType
+                                                     (HeadersFlags
+                                                        Bit0 Bit1 Bit0 Bit0))
+                                                  (streamId (frameHeader f)) in
                       (Success (Build_Frame fh HeadersType fp),
                        (setts, Some (s1, s2), false, cctxt', dctxt', ""))
                     end
                   end
                 end
-              | _, _ => (Failure "scheme or path sent in connect", app_s)
+              | _, _ => (Success (rst (streamId (frameHeader f)) ProtocolError), app_s)
               end
             else (Failure "Non connect method received", app_s)
           end
