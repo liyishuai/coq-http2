@@ -40,25 +40,41 @@ Module Proxy (codec:HPACK) : AppType codec.
         forwarded, so these must be handled. Settings frames are forwarded, but
         also processed? *)
   Definition execute (f:Frame) : APP (optionE Frame) :=
+    (* Helper function that handles when the full encoded header block is received.
+       The proxy expects a connect method, see 
+       https://http2.github.io/http2-spec/#CONNECT *)
     let decode s app_s :=
         let '(setts, oauth, cont, cctxt, dctxt, buff) := app_s in
+        (* s is ready to be decoded. The spec says decoding errors MUST be treated
+           as a COMPRESSION_ERROR: https://http2.github.io/http2-spec/#HeaderBlock *)
         match codec.decodeHeader dctxt s with
         | inl _ => (Failure "COMPRESSION_ERROR", app_s)
         | inr (hl, dctxt') =>
-          let find s := SetoidList.findA (string_beq s) hl in 
+          (* hl is the decoded header list received by the proxy *)
+          let find s := SetoidList.findA (string_beq s) hl in
+          (* According to https://http2.github.io/http2-spec/#CONNECT the :method
+             pseudo header is set to connect *)
           match find ":method" with
           | None => (Failure "Non connect header received", app_s)
           | Some s =>
             if string_beq s "CONNECT"
             then
+              (* According to https://http2.github.io/http2-spec/#CONNECT the
+                 :scheme and :path pseudo headers MUST be omitted *)
               match find ":scheme", find ":path" with
               | None, None =>
+                (* According to https://http2.github.io/http2-spec/#CONNECT the
+                   :authority pseudo header contains the host and port to connect
+                   to, host seperated from port by colon *)
                 match find ":authority" with
                 | None => (Failure "No authority for connect method", app_s)
                 | Some s =>
                   match String_splitAtSub ":" s with
                   | None => (Failure "Authority port not seperated by colon", app_s)
                   | Some (s1, s2) =>
+                    (* Once this connection is successfully established, the 
+                       proxy sends a HEADERS frame containing a 2xx series status 
+                       code to the client *)
                     match codec.encodeHeader defaultEncodeStrategy
                                              cctxt [(":status", "200")] with
                     | inl _ => (Failure "Should be unreachable", app_s)
