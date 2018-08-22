@@ -262,6 +262,26 @@ Inductive  FramePayload : FrameType -> Type :=
 | ContinuationFrame : HeaderBlockFragment                   -> FramePayload ContinuationType
 | UnknownFrame type : string                                -> FramePayload type.
 
+Definition framePayloadLength {ft} (fp:FramePayload ft) : N :=
+  N.of_nat
+  match fp with
+  | DataFrame x => length x
+  | HeadersFrame p hbf =>
+    match p with
+    | None => 0
+    | _ => 1
+    end + 4 + (length hbf)
+  | PriorityFrame x => 5
+  | RSTStreamFrame x => 4
+  | SettingsFrame x => 6
+  | PushPromiseFrame _ hbf => 4 + (length hbf)
+  | PingFrame _ => 8
+  | GoAwayFrame _ _ d => 8 + (length d)
+  | WindowUpdateFrame _ => 4
+  | ContinuationFrame x
+  | UnknownFrame type x => length x
+  end.
+
 Inductive Frame :=
   { frameHeader  : FrameHeader;
     frameType    : FrameType;
