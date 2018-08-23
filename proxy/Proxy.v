@@ -1,5 +1,5 @@
 From HTTP2.proxy Require Import AppType.
-From HTTP2.src.HPACK Require Import HPACKAbs HPACKTypes.
+From HTTP2.src.HPACK Require Import HPACKAbs HPACKImpl HPACKTypes.
 From HTTP2.src Require Import Types.
 From HTTP2.src.Util Require Import OptionE StringUtil BitField.
 Require Import String BinNat List Bvector.
@@ -8,7 +8,7 @@ Import ListNotations.
 Open Scope string_scope.
 Open Scope list_scope.
 
-Module Proxy (codec:HPACK) : AppType codec.
+Module Proxy : AppType.
   Definition Authority := string * string. (* The host and port to connect to *)
   Definition Continuation := bool. (* Whether the proxy is currently waiting for 
                                    continuation frames. *)
@@ -61,7 +61,7 @@ Module Proxy (codec:HPACK) : AppType codec.
         let '(setts, oauth, cont, cctxt, dctxt, buff) := app_s in
         (* s is ready to be decoded. The spec says decoding errors MUST be treated
            as a COMPRESSION_ERROR: https://http2.github.io/http2-spec/#HeaderBlock *)
-        match codec.decodeHeader dctxt s with
+        match HPACKImpl.decodeHeader dctxt s with
         | inl _ => (Success (goaway (streamId (frameHeader f)) CompressionError), app_s)
         | inr (hl, dctxt') =>
           (* hl is the decoded header list received by the proxy *)
@@ -91,7 +91,7 @@ Module Proxy (codec:HPACK) : AppType codec.
                     (* Once this connection is successfully established, the 
                        proxy sends a HEADERS frame containing a 2xx series status 
                        code to the client *)
-                    match codec.encodeHeader defaultEncodeStrategy
+                    match HPACKImpl.encodeHeader defaultEncodeStrategy
                                              cctxt [(":status", "200")] with
                     | inl _ => (Failure "Should be unreachable", app_s)
                     | inr (hbf, cctxt') =>

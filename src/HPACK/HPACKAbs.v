@@ -19,8 +19,6 @@ Definition defaultEncodeStrategy : EncodeStrategy := encodeStrategy Linear false
 Definition defaultDTable : DTable := (4096, 4096, []).
 
 Module Type HPACK.
-  Context {H1:Monad Err}.
-  Context {H2:MonadExc HPACKError Err}.
   Parameter encodeHeader : EncodeStrategy -> DTable -> HeaderList -> Err (string * DTable).
 
   Parameter decodeHeader : DTable -> string -> Err (HeaderList * DTable).

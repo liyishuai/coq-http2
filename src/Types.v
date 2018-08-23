@@ -278,7 +278,7 @@ Definition framePayloadLength {ft} (fp:FramePayload ft) : N :=
   | PingFrame _ => 8
   | GoAwayFrame _ _ d => 8 + (length d)
   | WindowUpdateFrame _ => 4
-  | ContinuationFrame x
+  | ContinuationFrame x => length x
   | UnknownFrame type x => length x
   end.
 

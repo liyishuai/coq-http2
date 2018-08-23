@@ -7,8 +7,6 @@ Import MonadNotation.
 Import ListNotations.
 
 Module HPACKImpl : HPACK.
-  Definition H1 : Monad Err. typeclasses eauto. Defined.
-  Definition H2 : MonadExc HPACKError Err. typeclasses eauto. Defined.
   Definition encodeHeader (es:EncodeStrategy)
              (dtable:DTable) (hl:HeaderList) : Err (string * DTable) :=
     let f hf :=

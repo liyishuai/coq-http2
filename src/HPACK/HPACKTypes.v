@@ -68,3 +68,13 @@ Inductive HPACKError :=
 | HeaderBlockOverflow : HPACKError (* Too many headers in header block *).
 
 Definition Err := sum HPACKError.
+
+Instance monadErr : Monad Err :=
+  {|
+    ret := @inr HPACKError;
+    bind _ _ x f := match x with
+                | inl e => inl e
+                | inr v => f v
+                end |}.
+                    
+                      
