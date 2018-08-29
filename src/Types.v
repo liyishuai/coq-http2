@@ -6,12 +6,13 @@ From Coq Require Import
      String
      Vector
      micromega.Psatz.
-From HTTP2.src Require Import
-     Equiv
-     Util.BitField
-     Util.BitVector
-     Util.ByteVector
-     Util.VectorUtil.
+From HTTP2 Require Import
+     Equiv.
+From HTTP2.Util Require Import
+     BitField
+     BitVector
+     ByteVector
+     VectorUtil.
 Import ListNotations.
 Open Scope N_scope.
 Open Scope type_scope.

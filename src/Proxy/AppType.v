@@ -1,5 +1,6 @@
-From HTTP2.src Require Import Types HPACK.HPACKAbs.
-From HTTP2.src.Util Require Import OptionE.
+From HTTP2 Require Import Types.
+From HTTP2.HPACK Require Import HPACKAbs.
+From HTTP2.Util Require Import OptionE.
 From Coq Require Import String.
 Require Import ExtLib.Data.Monads.StateMonad.
 

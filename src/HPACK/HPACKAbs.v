@@ -1,4 +1,5 @@
-From HTTP2.src Require Import HPACK.HPACKTypes Util.OptionE.
+From HTTP2.HPACK Require Import HPACKTypes.
+From HTTP2.Util Require Import OptionE.
 Require Import String BinNat List.
 From ExtLib Require Import Monad MonadExc.
 Import ListNotations.

@@ -5,10 +5,11 @@ From ExtLib Require Import
      Structures.MonadExc
      Structures.Monoid.
 Import MonadNotation.
-From HTTP2.src Require Import
-     Types
-     Util.ByteVector
-     Util.StringUtil.
+From HTTP2 Require Import
+     Types.
+From HTTP2.Util Require Import
+     ByteVector
+     StringUtil.
 Import VectorNotations.
 
 Notation Tycon := (Type -> Type)

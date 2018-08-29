@@ -1,7 +1,7 @@
 Require Import String List BinNat.
-From HTTP2.src.HPACK Require Import HPACKAbs HPACKDecode HPACKEncode
+From HTTP2.HPACK Require Import HPACKAbs HPACKDecode HPACKEncode
      HPACKTables HPACKTypes HPACKProcessor.
-From HTTP2.src.Util Require Import Parser ParserInstances.
+From HTTP2.Util Require Import Parser ParserInstances.
 From ExtLib Require Import Monads StateMonad.
 Import MonadNotation.
 Import ListNotations.

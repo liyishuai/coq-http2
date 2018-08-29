@@ -1,4 +1,4 @@
-From HTTP2.src.HPACK Require Import HPACKTypes HPACKTables.
+From HTTP2.HPACK Require Import HPACKTypes HPACKTables.
 From Coq Require Import BinNat List Logic String Ascii Basics Recdef.
 Import ListNotations.
 Require Coq.Program.Tactics.
@@ -8,11 +8,11 @@ Open Scope N_scope.
 Open Scope program_scope.
 
 (* https://tools.ietf.org/html/rfc7541#section-5.1
-   
+
    encodes an unsigned integer i with a prefix of n bits.
    Returns a list of bools. This could be changed in the future,
    but for now since the result varies in length depending on
-   the value of i, this might be the best approach. 
+   the value of i, this might be the best approach.
 
    Pseudocode to represent an integer I is as follows:
 
@@ -38,8 +38,8 @@ Function encode_N_help_rec (i:N) {wf (N.lt) i } : list bool :=
     encode_N_help ((i mod 128) + 128) 8
                   ++ encode_N_help_rec (i / 128)
   end.
-Proof. 
-  intros. 
+Proof.
+  intros.
   pose proof (N.ltb_lt i 128); pose proof not_iff_compat; apply H0 in H;
     assert ((i <? 128) <> true).
     intros contra; rewrite contra in teq; inversion teq.
@@ -77,7 +77,7 @@ Fixpoint huffman_string (s:string) : list bool :=
 
 (* Encodes as list of bools (binary number in msb) *)
 Definition encode_string (H:bool) (s:string) : list bool :=
-  H :: 
+  H ::
     if H then
       let y := huffman_string s in
       let x := N.of_nat (List.length y) in
@@ -85,7 +85,7 @@ Definition encode_string (H:bool) (s:string) : list bool :=
       encode_N (len + 1) 7 ++ y ++
                if x mod 8 =? 0 then repeat true (N.to_nat 8)
                else repeat true (N.to_nat (8 - (x mod 8)))
-    else encode_N (N.of_nat (length s)) 7 ++ string_to_bool_list s. 
+    else encode_N (N.of_nat (length s)) 7 ++ string_to_bool_list s.
 
 (* https://tools.ietf.org/html/rfc7541#section-6.1 *)
 Definition encode_IndexedHF (i:N) : list bool :=

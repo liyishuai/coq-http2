@@ -1,11 +1,12 @@
-From HTTP2.src Require Import
+From HTTP2 Require Import
      Equiv
-     Types
-     Util.BitVector
-     Util.ByteVector
-     Util.Parser
-     Util.VectorUtil
-     Util.StringUtil.
+     Types.
+From HTTP2.Util Require Import
+     BitVector
+     ByteVector
+     Parser
+     VectorUtil
+     StringUtil.
 From Coq Require Import NArith Bvector.
 From ExtLib Require Import Functor Monad MonadExc.
 Import FunctorNotation MonadNotations.

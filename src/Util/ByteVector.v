@@ -1,5 +1,5 @@
 From Coq Require Import Ascii Basics NArith String Vector.
-From HTTP2.src.Util Require Import StringUtil.
+From HTTP2.Util Require Import StringUtil.
 Import VectorNotations.
 Open Scope program_scope.
 Open Scope string_scope.
@@ -7,7 +7,7 @@ Open Scope N_scope.
 
 Definition ByteVector := Vector.t ascii.
 Definition ByteNil : ByteVector 0 := Vector.nil ascii.
- 
+
 Definition to_string {n : nat} : ByteVector n -> string :=
   String_rev ∘ (fun v => fold_right String v "").
 

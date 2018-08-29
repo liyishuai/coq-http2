@@ -1,11 +1,11 @@
-From HTTP2.src.HPACK Require Import HPACKTypes HPACKTables.
-From HTTP2.src.Util Require Import Parser.
+From HTTP2.HPACK Require Import HPACKTypes HPACKTables.
+From HTTP2.Util Require Import Parser.
 From Coq Require Import Basics.
 From ExtLib Require Import Monads.
 Import MonadNotation.
 
 (* https://tools.ietf.org/html/rfc7541#section-3.2 *)
-(* Takes a Header Field Representation (which is part of a Header Block) and 
+(* Takes a Header Field Representation (which is part of a Header Block) and
    a dynamic table, and processes the hfr, returning either an error,
    or a potentially mutated dynamic table. *)
 Definition process_HFR `{Monad Err} `{MonadExc HPACKError Err}

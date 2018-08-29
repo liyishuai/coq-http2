@@ -11,13 +11,15 @@ From ExtLib Require Import
      Structures.MonadTrans
      Structures.Monoid.
 Import MonadNotation.
-From HTTP2.src Require Import
-     HPACK.HPACKTypes
-     Types
-     Util.ByteVector
-     Util.Parser
-     Util.StringUtil
-     Util.VectorUtil.
+From HTTP2.HPACK Require Import
+     HPACKTypes.
+From HTTP2 Require Import
+     Types.
+From HTTP2.Util Require Import
+     ByteVector
+     Parser
+     StringUtil
+     VectorUtil.
 Import VectorNotations.
 
 Record parser (a : Type) := mkParser {

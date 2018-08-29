@@ -1,13 +1,14 @@
 From Coq Require Import String BinNat Ascii BinNatDef Vector List.
-From HTTP2.src Require Import
+From HTTP2 Require Import
      Equiv
-     Types
-     Util.BitVector
-     Util.ByteVector
-     Util.Parser
-     Util.VectorUtil
-     Util.StringUtil. 
-From HTTP2.src.HPACK Require Import HPACKTypes HPACKTables.
+     Types.
+From HTTP2.Util Require Import
+     BitVector
+     ByteVector
+     Parser
+     VectorUtil
+     StringUtil.
+From HTTP2.HPACK Require Import HPACKTypes HPACKTables.
 From ExtLib Require Import Monads.
 Import MonadNotation.
 Import ListNotations.
@@ -16,7 +17,7 @@ Open Scope string_scope.
 Open Scope monad_scope.
 Open Scope list_scope.
 
-(* Decodes a string to an integer where at least the first octet (ascii) is 
+(* Decodes a string to an integer where at least the first octet (ascii) is
    assumed to be an encoded integer. The prefix is a value of n bits.
     https://tools.ietf.org/html/rfc7541#section-5.1
 
@@ -55,11 +56,11 @@ Fixpoint decode_integer_h {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
 
    For fuel, I used 100, because integers are only used as indices,
    which means the dynamic table would have to have size 2^100 for this
-   to be a problem. 
+   to be a problem.
 
    Alternatively, the fuel could be a parameter passed in from when the
    header block fragments are combined to form a header block, or used in
-   an MParser with an internal fuel. 
+   an MParser with an internal fuel.
 *)
 Definition decode_integer {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            `{MParser byte m} (prefix:N) (n:N) : m N :=
@@ -119,7 +120,7 @@ Fixpoint decode_hstring_h {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
           end
       end
     end
-  end.    
+  end.
 
 Definition decode_hstring {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            `{MParser byte m} (s:string) : m string :=
@@ -193,7 +194,7 @@ Fixpoint decode_HB_h {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
                             | _ => raise e
                             end);;
     ret (h :: hs)
-  end.  
+  end.
 
 Definition decode_HB {m:Tycon} `{Monad m} `{MonadExc HPACKError m}
            `{MParser byte m} : m HeaderBlock :=

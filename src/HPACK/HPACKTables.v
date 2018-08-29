@@ -1,5 +1,6 @@
-From HTTP2.src.HPACK Require Import HPACKTypes.
-From HTTP2.src Require Import Types Util.Parser.
+From HTTP2.HPACK Require Import HPACKTypes.
+From HTTP2 Require Import Types.
+From HTTP2.Util Require Import Parser.
 From Coq Require Import Strings.String BinNat Lists.List Basics.
 From ExtLib Require Import Monad MonadExc.
 Import ListNotations MonadNotation.
@@ -97,14 +98,14 @@ Definition eqb_hf (s1 s2:HeaderField) : bool :=
 Definition find_table (h:HeaderField) (t:Table) : option N :=
   let fix loop i l :=
       match l with
-      | [] => None 
+      | [] => None
       | a :: tl =>
         if eqb_hf h a then Some i else loop (N.succ i) (tl)
       end in
   loop 1 t.
 
 (* The size of an entry is the sum of its name's length in octets (as defined in
-   https://tools.ietf.org/html/rfc7541#section-5.2), its value's length in 
+   https://tools.ietf.org/html/rfc7541#section-5.2), its value's length in
    octets, and 32. *)
 Definition size_hf (hf:HeaderField) : N :=
   N.of_nat (String.length (fst hf)) + 32.
@@ -151,7 +152,7 @@ Definition add_dtable_entry (dynamic_table:DTable) (entry:HeaderField)
   : DTable :=
   (* First, evict entries so that the table can add the entry (removes elements
      if table is non empty and adding element pushes table over max size), add
-     entry to table, and finally evict entries if table is now too large 
+     entry to table, and finally evict entries if table is now too large
      (removes just entry added only when entry is larger than max table size) *)
   let evict1 := change_dtable_size (fst (fst dynamic_table) - size_hf entry)
                                    dynamic_table in
