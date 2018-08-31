@@ -17,7 +17,6 @@ Module Proxy : AppType.
   Definition buffer := string. (* Current accumulation of headers or push_promise *)
   Definition app_state := Settings * option Authority * Continuation *
                           Compression_ctxt * Decompression_ctxt * buffer.
-  Definition init : app_state -> app_state := id.
   Definition init_app_state : app_state :=
         (defaultSettings, None, false, defaultDTable, defaultDTable, "").
   Definition APP := state app_state.
