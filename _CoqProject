@@ -5,6 +5,7 @@ src/Util/VectorUtil.v
 src/Util/ByteVector.v
 src/Util/BitVector.v
 src/Util/OptionE.v
+src/Util/IO.v
 src/Equiv.v
 src/Types.v
 src/HPACK/HPACKTypes.v

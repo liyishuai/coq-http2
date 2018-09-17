@@ -34,3 +34,5 @@ nra.cache
 Makefile.coq*
 html/
 *TAGS
+test/io_roundtrip.ml
+test/io_roundtrip.mli
