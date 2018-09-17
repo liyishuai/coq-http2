@@ -23,23 +23,24 @@ Definition padding (p:option N) : string :=
   end.
 
 Program Definition streamid_to_vector (E:bool) (sid:StreamId) : ByteVector 4 :=
-  ByteVector_of_Bvector (Bvector_tail_cons sid E).
+  ByteVector_of_Bvector (E :: sid).
 
-Definition streamid_to_string (E:bool) := to_string ∘ streamid_to_vector E.
+Definition streamid_to_string (E:bool) : StreamId -> string :=
+  to_string ∘ streamid_to_vector E.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Program Definition encodeFrameHeader (ft: FrameType) (fh: FrameHeader) : ByteVector 9 :=
   (* Length (24) *)
-  let v_len := ByteVector_of_N 3 (payloadLength fh) in
+  let v_len := @ByteVector_of_Bvector 3 (payloadLength fh) in
   (* Type (8) *)
-  let v_ft := ByteVector_of_N 1 (toFrameTypeId ft) in
+  let v_ft := @ByteVector_of_N 1 (toFrameTypeId ft) in
   (* Flags (8) *)
   let v_flgs := @ByteVector_of_Bvector 1 (flags fh) in
   (* R is a reserved 1-bit field, MUST remain unset when sending and MUST be
      ignored when receiving. *)
   (* Stream Identifier (31) *)
   let v_si := streamid_to_vector false (streamId fh) in
-  (append v_si (append v_flgs (append v_ft v_len))).
+  (append v_len (append v_ft (append v_flgs v_si))).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.1 *)
 Definition buildData (p:option N) (s:string) :=
@@ -49,7 +50,6 @@ Definition buildData (p:option N) (s:string) :=
   s ++
   (* Padding ( * ) *)
   padding p.
-
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.2 *)
 Definition buildHeaders (p:option N) (op:option Priority) (hbf:HeaderBlockFragment) :=
@@ -85,15 +85,20 @@ Definition buildRSTStream (e:ErrorCode) :=
 Open Scope list_scope.
 Open Scope string_scope.
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
-Program Fixpoint buildSettings (sets:list Setting) :=
+Program Fixpoint buildSettings_ (sets:list Setting) :
+  ByteVector (length sets * 6) :=
   match sets with
-  | List.nil => ""
+  | List.nil => []
   | (sk, sv) :: tl =>
     (* Identifier (16) *)
-    to_string (@ByteVector_of_Bvector 2 sk)
+     append (@ByteVector_of_Bvector 2 sk)
     (* Value (32) *)
-    ++ to_string (@ByteVector_of_Bvector 4 sv) ++ buildSettings tl
+    (append (@ByteVector_of_Bvector 4 sv)
+            (buildSettings_ tl))
   end.
+
+Definition buildSettings (sets : list Setting) : string :=
+  to_string (buildSettings_ sets).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.6 *)
 Definition buildPushPromise (p:option N) (sid:StreamId)
@@ -113,7 +118,6 @@ Definition buildPushPromise (p:option N) (sid:StreamId)
 Definition buildPing (v:ByteVector 8) :=
   (* Opaque Datra (64) *)
   to_string v.
-
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.8 *)
 Definition buildGoAway (sid:StreamId) (e:ErrorCode) (s:string) :=

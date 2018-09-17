@@ -9,16 +9,13 @@ Definition ByteVector := Vector.t ascii.
 Definition ByteNil : ByteVector 0 := Vector.nil ascii.
 
 Definition to_string {n : nat} : ByteVector n -> string :=
-  String_rev ∘ (fun v => fold_right String v "").
+  (fun v => fold_right String v "").
 
-Fixpoint from_string' (s : string) : ByteVector (length s) :=
+Fixpoint from_string (s : string) : ByteVector (length s) :=
   match s with
   | "" => ByteNil
-  | String b s' => b::from_string' s'
+  | String b s' => b::from_string s'
   end.
-
-Definition from_string (s : string) : ByteVector (length s) :=
-  rev (from_string' s).
 
 Fixpoint N_of_ByteVector {n : nat} (v : ByteVector n) : N :=
   match v with
