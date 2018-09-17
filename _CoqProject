@@ -11,6 +11,7 @@ src/Types.v
 src/HPACK/HPACKTypes.v
 src/Util/Parser.v
 src/Util/ParserInstances.v
+src/Pretty.v
 src/Encode.v
 src/Decode.v
 src/HPACK/HPACKTables.v

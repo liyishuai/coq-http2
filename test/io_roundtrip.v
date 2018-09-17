@@ -8,6 +8,7 @@ From SimpleIO Require Import
 From HTTP2 Require Import
      Decode
      Encode
+     Pretty
      Types
      Util.BitVector
      Util.ByteVector
@@ -19,9 +20,6 @@ Require Extraction.
 Definition test_file := "/tmp/test_file".
 
 Import IONotations.
-
-Axiom Bvector_of_N : forall n, N -> Bvector n.
-Arguments Bvector_of_N {n}.
 
 Definition example_ping_frame : Frame := {|
   frameHeader := {|
@@ -40,6 +38,7 @@ Definition main : IO unit :=
   inp <- open_in test_file;;
   fh <- run_file_parser (unindex decodeFrameHeader) inp;;
   let '(ft, fh) := fh in
+  print_endline (pretty_FrameHeader fh);;
   close_in inp.
 
 Definition exe := unsafe_run main.

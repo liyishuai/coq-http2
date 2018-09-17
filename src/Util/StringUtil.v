@@ -11,6 +11,8 @@ Notation bytes := string.
 Infix ":::" := String
 (at level 60, right associativity) : string_scope.
 
+Definition nl : string := "010" ::: "".
+
 Definition string_beq (s1 s2:string) : bool :=
   if string_dec s1 s2 then true else false.
 
@@ -125,3 +127,23 @@ Proof with simpl in *; subst; auto.
         ** intros.
            apply Lt.lt_n_S...
 Qed.
+
+Definition hex (b0 b1 b2 b3 : bool) : ascii :=
+  match b0, b1, b2, b3 with
+  | false, false, false, false => "0"
+  | true,  false, false, false => "1"
+  | false, true,  false, false => "2"
+  | true,  true,  false, false => "3"
+  | false, false, true,  false => "4"
+  | true,  false, true,  false => "5"
+  | false, true,  true,  false => "6"
+  | true,  true,  true,  false => "7"
+  | false, false, false, true  => "8"
+  | true,  false, false, true  => "9"
+  | false, true,  false, true  => "A"
+  | true,  true,  false, true  => "B"
+  | false, false, true,  true  => "C"
+  | true,  false, true,  true  => "D"
+  | false, true,  true,  true  => "E"
+  | true,  true,  true,  true  => "F"
+  end.
