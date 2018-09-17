@@ -140,29 +140,37 @@ Program Definition checkFrameHeader {m : Tycon}
 
 Solve All Obligations with repeat constructor; intro; discriminate.
 
-Definition decodeWithPadding {m : Tycon}
+(* Section 6.1:
+     "If the length of the padding is the length of the frame payload
+     or greater, the recipient MUST treat this as a connection error
+     (Section 5.4.1) of type PROTOCOL_ERROR." *)
+Definition decodeWithPadding {m : Tycon} {A : Type}
            `{Monad m} `{MonadExc HTTP2Error m} `{MParser byte m}
-           (len : N) (h : FrameHeader) : m bytes :=
+           (decode : N -> m (Padding -> A))
+           (h : FrameHeader) (len : N) :
+  m A%type :=
   let fff := flags h in
   if testPadded fff then (
     padlen <-(N_of_ascii) get_byte;;
-    (* 1 byte for to parse padlen *)
-    assert (padlen + 1 <=? len)
+    assert (padlen <=? len)
            (ConnectionError ProtocolError "too much padding");;
-    bs <- get_bytes (N.to_nat (len - padlen - 1));;
-    get_bytes (N.to_nat padlen);; (* Discard padding *)
-    ret bs
-  )%monad else
-    get_bytes (N.to_nat len).
+    bs <- decode (len - padlen - 1);;
+    pad <- get_bytes (N.to_nat padlen);; (* Discard padding *)
+    ret (bs pad)
+  )%monad else (
+    bs <- decode len;;
+    ret (bs "")).
 
 Close Scope nat_scope.
 
 Definition FramePayloadDecoder (frameType : FrameType) :=
   forall m `{Monad m} `{MonadExc HTTP2Error m} `{MParser byte m},
-    N -> FrameHeader -> m (FramePayload frameType).
+    FrameHeader -> N -> m (FramePayload frameType).
 
 Definition decodeDataFrame : FramePayloadDecoder DataType :=
-  fun _ _ _ _ n h => DataFrame <$> decodeWithPadding n h.
+  fun _ _ _ _ =>
+    decodeWithPadding (fun n =>
+      DataFrame <$> get_bytes (N.to_nat n)).
 
 Program Definition priority {m : nat -> Tycon}
         `{IMonad_nat m} `{MParser byte (m 1%nat)} :
@@ -179,27 +187,28 @@ Program Definition priority {m : nat -> Tycon}
 
 Definition decodeHeadersFrame :
   FramePayloadDecoder HeadersType :=
-  fun _ _ _ _ n h =>
-    let fff := flags h in
-    if testPriority fff
-    then
-      p <- unindex priority;;
-      s <- get_bytes (N.to_nat (n - 5));;
-      ret (HeadersFrame (Some p) s)
-    else
-      s <- get_bytes (N.to_nat n);;
-      ret (HeadersFrame None s).
+  fun _ _ _ _ h =>
+    decodeWithPadding (fun n =>
+      let fff := flags h in
+      if testPriority fff
+      then
+        p <- unindex priority;;
+        s <- get_bytes (N.to_nat (n - 5));;
+        ret (HeadersFrame (Some p) s)
+      else
+        s <- get_bytes (N.to_nat n);;
+        ret (HeadersFrame None s)) h.
 
 Definition decodePriorityFrame :
   FramePayloadDecoder PriorityType :=
-  fun _ _ _ _ n h =>
+  fun _ _ _ _ _h _n =>
     (* n must be 5 *)
     p <- unindex priority;;
     ret (PriorityFrame p).
 
 Definition decodeRSTStreamFrame :
   FramePayloadDecoder RSTStreamType :=
-  fun _ _ _ _ n h =>
+  fun _ _ _ _ _n _h =>
     (* n must be 4 *)
     ecode <-(N_of_ByteVector) get_vec 4;;
     ret (RSTStreamFrame (fromErrorCodeId ecode)).
@@ -212,7 +221,7 @@ Definition decodeSetting {m : Tycon} `{Monad m} `{MParser byte m} :
 
 Definition decodeSettingsFrame :
   FramePayloadDecoder SettingsType :=
-  fun _ _ _ _ n h =>
+  fun _ _ _ _ _h n =>
     (* n must be a multiple of 6 *)
     let n := N.div n 6%N in
     ss <- N.iter n (fun more =>
@@ -224,22 +233,23 @@ Definition decodeSettingsFrame :
 
 Definition decodePushPromiseFrame :
   FramePayloadDecoder PushPromiseType :=
-  fun _ _ _ _ n h =>
-    (* n must be at least 4 *)
-    id <-(snd) unindex decodeStreamId;;
-    bs <- get_bytes (N.to_nat (n-4));;
-    ret (PushPromiseFrame id bs).
+  fun _ _ _ _ =>
+    decodeWithPadding (fun n =>
+      (* n must be at least 4 *)
+      id <-(snd) unindex decodeStreamId;;
+      bs <- get_bytes (N.to_nat (n-4));;
+      ret (PushPromiseFrame id bs)).
 
 Definition decodePingFrame :
   FramePayloadDecoder PingType :=
-  fun _ _ _ _ n h =>
+  fun _ _ _ _ _h _n =>
     (* n must be 8 *)
     v <- get_vec 8;;
     ret (PingFrame v).
 
 Definition decodeGoAwayFrame :
   FramePayloadDecoder GoAwayType :=
-  fun _ _ _ _ n h =>
+  fun _ _ _ _ h n =>
     (* n must be at least 8 *)
     id <-(snd) unindex decodeStreamId;;
     ecode <-(N_of_ByteVector) get_vec 4;;
@@ -248,13 +258,13 @@ Definition decodeGoAwayFrame :
 
 Definition decodeWindowUpdateFrame :
   FramePayloadDecoder WindowUpdateType :=
-  fun _ _ _ _ n h =>
+  fun _ _ _ _ _h _n =>
     (* n must be 4 *)
     inc <-(snd) unindex get31bit;;
     ret (WindowUpdateFrame inc).
 
 Definition decodeContinuationFrame :
   FramePayloadDecoder ContinuationType :=
-  fun _ _ _ _ n h =>
+  fun _ _ _ _ _h n =>
     hbf <- get_bytes (N.to_nat n);;
     ret (ContinuationFrame hbf).

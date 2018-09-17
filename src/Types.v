@@ -250,32 +250,43 @@ Definition toFrameFlagsField type (ff : FrameFlags type) :
 Instance EquivFrameFlags {typ} : Equiv (FrameFlags typ) :=
   { equiv := eq_equiv (toFrameFlagsField typ) }.
 
-Inductive  FramePayload : FrameType -> Type :=
-  DataFrame         : string                                -> FramePayload DataType
-| HeadersFrame      : option Priority -> HeaderBlockFragment -> FramePayload HeadersType
-| PriorityFrame     : Priority                              -> FramePayload PriorityType
-| RSTStreamFrame    : ErrorCode                             -> FramePayload RSTStreamType
-| SettingsFrame     : list Setting                          -> FramePayload SettingsType
-| PushPromiseFrame  : StreamId        -> HeaderBlockFragment -> FramePayload PushPromiseType
-| PingFrame         : ByteVector 8                          -> FramePayload PingType
-| GoAwayFrame       : StreamId         -> ErrorCode -> string -> FramePayload GoAwayType
-| WindowUpdateFrame : WindowSize                            -> FramePayload WindowUpdateType
-| ContinuationFrame : HeaderBlockFragment                   -> FramePayload ContinuationType
-| UnknownFrame type : string                                -> FramePayload type.
+Definition HBF := HeaderBlockFragment.
+
+Definition Padding := string.
+
+(* About padding *)
+(* Section 10.7:
+     "Intermediaries SHOULD retain padding for DATA frames but MAY
+     drop padding for HEADERS and PUSH_PROMISE frames." *)
+(* Retaining padding also makes it easier to specify roundtrip
+   properties between encoding and decoding. *)
+
+Inductive FramePayload : FrameType -> Type :=
+  DataFrame         : string -> Padding -> FramePayload DataType
+| HeadersFrame      : option Priority -> HBF -> Padding -> FramePayload HeadersType
+| PriorityFrame     : Priority     -> FramePayload PriorityType
+| RSTStreamFrame    : ErrorCode    -> FramePayload RSTStreamType
+| SettingsFrame     : list Setting -> FramePayload SettingsType
+| PushPromiseFrame  : StreamId -> HBF -> Padding -> FramePayload PushPromiseType
+| PingFrame         : ByteVector 8 -> FramePayload PingType
+| GoAwayFrame       : StreamId -> ErrorCode -> string -> FramePayload GoAwayType
+| WindowUpdateFrame : WindowSize   -> FramePayload WindowUpdateType
+| ContinuationFrame : HBF          -> FramePayload ContinuationType
+| UnknownFrame type : string       -> FramePayload type.
 
 Definition framePayloadLength {ft} (fp:FramePayload ft) : N :=
   N.of_nat
   match fp with
-  | DataFrame x => length x
-  | HeadersFrame p hbf =>
+  | DataFrame x pad => length x + length pad
+  | HeadersFrame p hbf pad =>
     match p with
     | None => 0
     | _ => 1
-    end + 4 + (length hbf)
+    end + 4 + length hbf + length pad
   | PriorityFrame x => 5
   | RSTStreamFrame x => 4
   | SettingsFrame x => 6
-  | PushPromiseFrame _ hbf => 4 + (length hbf)
+  | PushPromiseFrame _ hbf pad => 4 + length hbf + length pad
   | PingFrame _ => 8
   | GoAwayFrame _ _ d => 8 + (length d)
   | WindowUpdateFrame _ => 4

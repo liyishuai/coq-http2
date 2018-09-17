@@ -42,32 +42,37 @@ Program Definition encodeFrameHeader (ft: FrameType) (fh: FrameHeader) : ByteVec
   let v_si := streamid_to_vector false (streamId fh) in
   (append v_len (append v_ft (append v_flgs v_si))).
 
+Definition with_padding (payload:string) (padding':option Padding) :=
+  match padding' with
+  | Some padding =>
+    let pad_len_N := N.of_nat (String.length padding) in
+    let pad_len := to_string (ByteVector_of_N 1 pad_len_N) in
+    pad_len ++ payload ++ padding
+  | None => payload
+  end.
+
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.1 *)
-Definition buildData (p:option N) (s:string) :=
-  (* Pad Length? (8) *)
-  pad_len p ++
-  (* Data ( * ) *)
-  s ++
-  (* Padding ( * ) *)
-  padding p.
+Definition buildData (data:string) (padding':option Padding) :=
+  with_padding data padding'.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.2 *)
-Definition buildHeaders (p:option N) (op:option Priority) (hbf:HeaderBlockFragment) :=
-  (* Pad Length? (8) *)
-  pad_len p ++
-  match op with
-  | None => ""
-  | Some p =>
-    (* E *)
-    (* StreamDependency? (31) *)
-    streamid_to_string (exclusive p) (streamDependency p) ++
-    (* Weight? (8) *)
-    to_string (@ByteVector_of_Bvector 1 (weight p) )
-  end
-    (* Header Block Fragment ( * ) *)
-    ++ hbf ++
+Definition buildHeaders
+           (op:option Priority) (hbf:HeaderBlockFragment)
+           (padding':option Padding) :=
+  with_padding
+    (match op with
+     | None => ""
+     | Some p =>
+       (* E *)
+       (* StreamDependency? (31) *)
+       streamid_to_string (exclusive p) (streamDependency p) ++
+       (* Weight? (8) *)
+       to_string (@ByteVector_of_Bvector 1 (weight p) )
+     end
+     (* Header Block Fragment ( * ) *)
+     ++ hbf)
     (* Padding ( * ) *)
-    padding p.
+    padding'.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.3 *)
 Definition buildPriority (p:Priority) :=
@@ -101,18 +106,16 @@ Definition buildSettings (sets : list Setting) : string :=
   to_string (buildSettings_ sets).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.6 *)
-Definition buildPushPromise (p:option N) (sid:StreamId)
-           (hbf:HeaderBlockFragment) :=
-  (* Pad Length? (8) *)
-  pad_len p ++
-  (* R: A single reserved bit *)
-  (* Promised Stream ID (31) *)
-  streamid_to_string false sid ++
-  (* Header block Fragment ( * ) *)
-  hbf ++
-  (* Padding ( * ) *)
-  padding p
-.
+Definition buildPushPromise
+           (sid:StreamId) (hbf:HeaderBlockFragment)
+           (padding':option Padding) :=
+  with_padding
+    ((* R: A single reserved bit *)
+     (* Promised Stream ID (31) *)
+     streamid_to_string false sid ++
+     (* Header block Fragment ( * ) *)
+     hbf)
+    padding'.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.7 *)
 Definition buildPing (v:ByteVector 8) :=
@@ -139,23 +142,30 @@ Definition buildWindowUpdate (ws:WindowSize) :=
 Definition buildContinuation (hbf:HeaderBlockFragment) :=
   (* Header Block Fragment ( * ) *) hbf.
 
+Definition mkPadding (padFlag:bool) (padding:Padding) :=
+  if padFlag then Some padding else None.
+
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6 *)
-Definition encodePayload (padding:option N) (f:Frame) : string :=
+Definition encodePayload (f:Frame) : string :=
+  let mkPad := mkPadding (testPadded (flags (frameHeader f))) in
   match framePayload f with
-  | DataFrame s => buildData padding s
-  | HeadersFrame op hbf => buildHeaders padding op hbf
+  | DataFrame s p => buildData s (mkPad p)
+  | HeadersFrame op hbf p => buildHeaders op hbf (mkPad p)
   | PriorityFrame p => buildPriority p
   | RSTStreamFrame e => buildRSTStream e
   | SettingsFrame sets => buildSettings sets
-  | PushPromiseFrame sid hbf => buildPushPromise padding sid hbf
+  | PushPromiseFrame sid hbf p =>
+    buildPushPromise sid hbf (mkPad p)
   | PingFrame v => buildPing v
   | GoAwayFrame sid e s => buildGoAway sid e s
   | WindowUpdateFrame ws => buildWindowUpdate ws
   | ContinuationFrame hbf => buildContinuation hbf
-  | UnknownFrame _ s => buildData padding s
+  | UnknownFrame _ s => s
   end.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
-Definition encodeFrame (padding:option N) (f:Frame) : string :=
-  to_string (encodeFrameHeader (frameType f) (frameHeader f)) ++
-            encodePayload padding f.
+Definition encodeFrame (f:Frame) : string :=
+  let ftype := frameType f in
+  let fheader := frameHeader f in
+  to_string (encodeFrameHeader ftype fheader) ++
+  encodePayload f.

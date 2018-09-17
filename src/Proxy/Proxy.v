@@ -94,7 +94,7 @@ Module Proxy : AppType.
                                              cctxt [(":status", "200")] with
                     | inl _ => (Failure "Should be unreachable", app_s)
                     | inr (hbf, cctxt') =>
-                      let fp := HeadersFrame None hbf in
+                      let fp := HeadersFrame None hbf "" in
                       let fh := Build_FrameHeader (framePayloadLength fp)
                                                   (toFrameFlagsField
                                                      HeadersType
@@ -130,7 +130,7 @@ Module Proxy : AppType.
                    end
                  else (* Continuation is not set, 1*)
                    match framePayload f with
-                   | HeadersFrame _ hbf =>
+                   | HeadersFrame _ hbf _ =>
                      let flags := flags (frameHeader f) in
                      if testEndHeaders flags
                      then (* No continuation expected. Decode right away *)
