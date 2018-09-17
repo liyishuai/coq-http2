@@ -17,7 +17,7 @@ From HTTP2 Require Import
 
 Require Extraction.
 
-Definition test_file := "/tmp/test_file".
+Definition test_file := "io_roundtrip.http2".
 
 Import IONotations.
 

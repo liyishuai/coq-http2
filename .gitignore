@@ -33,6 +33,8 @@ nlia.cache
 nra.cache
 Makefile.coq*
 html/
+_build/
 *TAGS
 test/io_roundtrip.ml
 test/io_roundtrip.mli
+test/io_roundtrip.http2

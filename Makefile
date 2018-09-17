@@ -16,3 +16,8 @@ clean:
 	$Vfind . -name *~    -print -delete
 	$Vfind . -name *.aux -print -delete
 	$V$(RM) Makefile.coq*
+
+test:
+	$(MAKE) -C test
+
+.PHONY: all coq html clean test
