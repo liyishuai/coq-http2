@@ -33,7 +33,7 @@ Definition example_ping_frame : Frame := {|
 
 Definition main : IO unit :=
   out <- open_out test_file;;
-  output_string out (encodeFrame None example_ping_frame);;
+  output_string out (encodeFrame example_ping_frame);;
   close_out out;;
   inp <- open_in test_file;;
   fh <- run_file_parser (unindex decodeFrameHeader) inp;;
