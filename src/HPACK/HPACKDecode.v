@@ -12,8 +12,8 @@ From HTTP2.HPACK Require Import HPACKTypes HPACKTables.
 From ExtLib Require Import Monads.
 Import MonadNotation.
 Import ListNotations.
-Open Scope N_scope.
 Open Scope string_scope.
+Open Scope N_scope.
 Open Scope monad_scope.
 Open Scope list_scope.
 

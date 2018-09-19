@@ -16,7 +16,7 @@ env:
   global:
   - OPAMYES=true
   matrix:
-  - COQ="coq.8.8.1"
+  - COQ="coq.dev"
 matrix:
   fast_finish: true
   allow_failures:
@@ -31,7 +31,9 @@ install:
 - opam config var root
 - ocamlc -v
 - opam repo add coq-released https://coq.inria.fr/opam/released || true
-- opam install $COQ coq-ext-lib coq-paco coq-simple-io
+- opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev || true
+- opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev || true
+- opam install $COQ coq-ext-lib.dev coq-paco coq-simple-io
 - opam list
 - make -C InteractionTrees install -j
 script:

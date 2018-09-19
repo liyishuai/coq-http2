@@ -279,8 +279,7 @@ Definition decodeFrame {m : Tycon}
            `{Monad m} `{MonadExc HTTP2Error m} `{MParser byte m}
            (settings : Settings) :
            m Frame :=
-  fth <- unindex decodeFrameHeader;;
-  let '(ftype, fheader) := fth in
+  '((ftype, fheader) as fth) <- unindex decodeFrameHeader;;
   checkFrameHeader settings fth;;
   let decodeFrame' : FramePayloadDecoder ftype :=
       match ftype with

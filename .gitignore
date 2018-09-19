@@ -19,6 +19,7 @@
 *.vio
 *.vo
 *~
+.DS_Store
 .coqdeps.d
 .coq-native/
 .csdp.cache
