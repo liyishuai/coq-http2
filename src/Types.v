@@ -272,7 +272,7 @@ Inductive FramePayload : FrameType -> Type :=
 | GoAwayFrame       : StreamId -> ErrorCode -> string -> FramePayload GoAwayType
 | WindowUpdateFrame : WindowSize   -> FramePayload WindowUpdateType
 | ContinuationFrame : HBF          -> FramePayload ContinuationType
-| UnknownFrame type : string       -> FramePayload type.
+| UnknownFrame type : string       -> FramePayload (UnknownType type).
 
 Definition framePayloadLength {ft} (fp:FramePayload ft) : N :=
   N.of_nat

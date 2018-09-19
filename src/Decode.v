@@ -268,3 +268,37 @@ Definition decodeContinuationFrame :
   fun _ _ _ _ _h n =>
     hbf <- get_bytes (N.to_nat n);;
     ret (ContinuationFrame hbf).
+
+Definition decodeUnknownFrame ty :
+  FramePayloadDecoder (UnknownType ty) :=
+  fun _ _ _ _ _h n =>
+    bs <- get_bytes (N.to_nat n);;
+    ret (UnknownFrame ty bs).
+
+Definition decodeFrame {m : Tycon} {A : Type}
+           `{Monad m} `{MonadExc HTTP2Error m} `{MParser byte m}
+           (settings : Settings) :
+           m Frame :=
+  '((ftype, fheader) as fth) <- unindex decodeFrameHeader;;
+  checkFrameHeader settings fth;;
+  let decodeFrame' : FramePayloadDecoder ftype :=
+      match ftype with
+      | DataType => decodeDataFrame
+      | HeadersType => decodeHeadersFrame
+      | PriorityType => decodePriorityFrame
+      | RSTStreamType => decodeRSTStreamFrame
+      | SettingsType => decodeSettingsFrame
+      | PushPromiseType => decodePushPromiseFrame
+      | PingType => decodePingFrame
+      | GoAwayType => decodeGoAwayFrame
+      | WindowUpdateType => decodeWindowUpdateFrame
+      | ContinuationType => decodeContinuationFrame
+      | UnknownType _ => decodeUnknownFrame _
+      end
+  in
+  fpayload <- decodeFrame' _ _ _ _ fheader (payloadLength fheader);;
+  ret {|
+    frameHeader := fheader;
+    frameType := ftype;
+    framePayload := fpayload;
+  |}.
