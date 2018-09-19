@@ -275,7 +275,7 @@ Definition decodeUnknownFrame ty :
     bs <- get_bytes (N.to_nat n);;
     ret (UnknownFrame ty bs).
 
-Definition decodeFrame {m : Tycon} {A : Type}
+Definition decodeFrame {m : Tycon}
            `{Monad m} `{MonadExc HTTP2Error m} `{MParser byte m}
            (settings : Settings) :
            m Frame :=

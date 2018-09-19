@@ -1,3 +1,4 @@
+From ExtLib.Data Require Import Monads.EitherMonad.
 From ExtLib.Structures Require Import Monad.
 
 From SimpleIO Require Import IOMonad CoqPervasives.
@@ -27,3 +28,10 @@ Instance MParser_file_parser : MParser byte file_parser := {
   get_token := FileParser (fun h =>
     IOMonad.map_io ascii_of_char (input_char h))
 }.
+
+Instance MParser_eitherT (m : Tycon) token e
+         `{Monad m} `{MParser token m} :
+  MParser token (eitherT e m) := {
+    get_token := mkEitherT _ _ _
+      (liftM inr get_token : m (e + token)%type);
+  }.

@@ -2,6 +2,8 @@ From Coq Require Import
      NArith
      Bool.Bvector.
 
+From ExtLib.Data Require Import Monads.EitherMonad.
+
 From SimpleIO Require Import
      IOMonad CoqPervasives.
 
@@ -36,9 +38,13 @@ Definition main : IO unit :=
   output_string out (encodeFrame example_ping_frame);;
   close_out out;;
   inp <- open_in test_file;;
-  fh <- run_file_parser (unindex decodeFrameHeader) inp;;
-  let '(ft, fh) := fh in
-  print_endline (pretty_FrameHeader fh);;
+  ef <- run_file_parser (unEitherT (decodeFrame defaultSettings)) inp;;
+  let out := match ef with
+             | inl e => pretty_HTTP2Error e
+             | inr f => pretty_Frame f
+             end
+  in
+  print_string out;;
   close_in inp.
 
 Definition exe := unsafe_run main.

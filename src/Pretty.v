@@ -22,3 +22,18 @@ Definition pretty_FrameHeader (h : FrameHeader) : string :=
   "payload: " ++ pretty_PayloadLength (payloadLength h) ++ " bytes" ++ nl ++
   "flags: " ++ pretty_FrameFlagsField (flags h) ++ nl ++
   "streamId: " ++ pretty_StreamId (streamId h) ++ nl.
+
+Definition pretty_Frame (f : Frame) : string :=
+  pretty_FrameHeader (frameHeader f).
+
+Definition pretty_HTTP2Error (e : HTTP2Error) : string :=
+  match e with
+  | ConnectionError code msg =>
+    "Connection error (" ++
+      hex_of_Bvector code ++ "): " ++
+      msg ++ nl
+  | StreamError code sid =>
+    "Stream error (" ++
+      hex_of_Bvector code ++ ") on stream " ++
+      hex_of_Bvector sid ++ nl
+  end.
