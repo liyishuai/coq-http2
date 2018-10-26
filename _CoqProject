@@ -2,7 +2,6 @@
 src/Util/BitField.v
 src/Util/StringUtil.v
 src/Util/VectorUtil.v
-src/Util/ByteVector.v
 src/Util/BitVector.v
 src/Util/OptionE.v
 src/Util/IO.v

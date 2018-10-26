@@ -4,7 +4,6 @@ From HTTP2 Require Import
      Types.
 From HTTP2.Util Require Import
      BitVector
-     ByteVector
      Parser
      VectorUtil
      StringUtil.

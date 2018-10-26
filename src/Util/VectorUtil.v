@@ -3,10 +3,6 @@ Set Warnings "-local-declaration,-scope".
 From Coq Require Import Basics Bool Equality ProofIrrelevance Vector.
 Import VectorNotations.
 
-(* Deconstruct a non-empty vector. *)
-Definition Vector_uncons {A} {n : nat} (v : Vector.t A (S n)) :
-  A * Vector.t A n := (hd v, tl v).
-
 Fixpoint splitAt {A} (l : nat) {r : nat} :
   Vector.t A (l + r) -> Vector.t A l * Vector.t A r :=
   match l with

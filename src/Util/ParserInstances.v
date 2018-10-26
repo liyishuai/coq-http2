@@ -1,6 +1,6 @@
 (* Implementation of the [Util.Parsers] interface. *)
 
-From Coq Require Import Vector.
+From Coq Require Import Vector ByteVector.
 From ExtLib Require Import
      Data.Nat
      Data.Monads.EitherMonad
@@ -16,7 +16,6 @@ From HTTP2.HPACK Require Import
 From HTTP2 Require Import
      Types.
 From HTTP2.Util Require Import
-     ByteVector
      Parser
      StringUtil
      VectorUtil.
@@ -128,7 +127,7 @@ Instance IMonad_iparser : IMonad_nat iparser := {
 
 Instance MParser_iparser : MParser byte (iparser 1) := {
   get_token := mkIParser (fun s =>
-    match Vector_uncons s : _ * ByteVector 0 with
+    match uncons s : _ * ByteVector 0 with
     | (c, _) => c
     end
   )%monad;

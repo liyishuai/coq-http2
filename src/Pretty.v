@@ -1,6 +1,6 @@
 From HTTP2 Require Import Types.
 From HTTP2.Util Require Import
-     BitField ByteVector BitVector VectorUtil StringUtil.
+     BitField BitVector VectorUtil StringUtil.
 From Coq Require Import
      Basics Bvector String BinNat List Ascii Vector.
 

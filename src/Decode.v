@@ -3,11 +3,10 @@ From HTTP2 Require Import
      Types.
 From HTTP2.Util Require Import
      BitVector
-     ByteVector
      Parser
      VectorUtil
      StringUtil.
-From Coq Require Import NArith Bvector.
+From Coq Require Import NArith Bvector ByteVector Vector.
 From ExtLib Require Import Functor Monad MonadExc.
 Import FunctorNotation MonadNotations.
 Import IMonadNotations.
@@ -23,8 +22,8 @@ Program Definition get31bit {m : nat -> Tycon}
         `{IMonad_nat m} `{MParser byte (m 1%nat)} :
   m 4%nat (bit * Bvector 31)%type :=
   icast (
-    b <-(Bvector_of_ByteVector) iget_vec 4;;
-    let '(e, sid) := Vector_uncons b in
+    b <-(to_Bvector) iget_vec 4;;
+    let '(e, sid) := uncons b in
     iret (e, sid))%imonad.
 
 Program Definition decode31bit {m : nat -> Tycon}
@@ -38,18 +37,18 @@ Program Definition decodeStreamId {m : nat -> Tycon}
         `{IMonad_nat m} `{MParser byte (m 1%nat)} :
     m 4%nat (bit * StreamId)%type :=
   icast (
-      b <-(Bvector_of_ByteVector) iget_vec 4;;
-      let '(e, sid) := Vector_uncons b in
+      b <-(to_Bvector) iget_vec 4;;
+      let '(e, sid) := uncons b in
       iret (e, sid))%imonad.
 
 Program Definition decodeFrameHeader {m : nat -> Tycon}
         `{IMonad_nat m} `{MParser byte (m 1%nat)} :
   m 9%nat (FrameType * FrameHeader)%type :=
   icast (
-    let fromFrameTypeId' x := fromFrameTypeId (N_of_ByteVector x) in
-    length         <-(N_of_ByteVector)        iget_vec 3;;
+    let fromFrameTypeId' x := fromFrameTypeId (BV2N x) in
+    length         <-(BV2N)        iget_vec 3;;
     frameType      <-(fromFrameTypeId')       iget_vec 1;;
-    flags          <-(Bvector_of_ByteVector)  iget_vec 1;;
+    flags          <-(to_Bvector)  iget_vec 1;;
     '(_, streamId) <- decodeStreamId;;              (* 4 *)
     iret (frameType, {| payloadLength := length;
                         flags         := flags;
@@ -179,7 +178,7 @@ Program Definition priority {m : nat -> Tycon}
     (* Split a 32-bit field into 1+31. *)
     '(e, id) <- decodeStreamId;;
     w <- get_byte;;
-    let weight := Bvector_of_ByteVector [w] in
+    let weight := to_Bvector [w] in
     iret {| exclusive := e;
             streamDependency := id;
             weight := weight |}
@@ -210,13 +209,13 @@ Definition decodeRSTStreamFrame :
   FramePayloadDecoder RSTStreamType :=
   fun _ _ _ _ _n _h =>
     (* n must be 4 *)
-    ecode <-(N_of_ByteVector) get_vec 4;;
+    ecode <-(BV2N) get_vec 4;;
     ret (RSTStreamFrame (fromErrorCodeId ecode)).
 
 Definition decodeSetting {m : Tycon} `{Monad m} `{MParser byte m} :
   m Setting :=
-  id  <-(Bvector_of_ByteVector) get_vec 2;;
-  val <-(Bvector_of_ByteVector) get_vec 4;;
+  id  <-(to_Bvector) get_vec 2;;
+  val <-(to_Bvector) get_vec 4;;
   ret (id, val).
 
 Definition decodeSettingsFrame :
@@ -228,7 +227,7 @@ Definition decodeSettingsFrame :
                       s <- decodeSetting;;
                       ss <- more;;
                       ret (s :: ss)%list)
-                   (ret nil);;
+                   (ret List.nil);;
     ret (SettingsFrame ss).
 
 Definition decodePushPromiseFrame :
@@ -252,7 +251,7 @@ Definition decodeGoAwayFrame :
   fun _ _ _ _ h n =>
     (* n must be at least 8 *)
     id <-(snd) unindex decodeStreamId;;
-    ecode <-(N_of_ByteVector) get_vec 4;;
+    ecode <-(BV2N) get_vec 4;;
     debug <- get_bytes (N.to_nat (n - 8));;
     ret (GoAwayFrame id (fromErrorCodeId ecode) debug).
 

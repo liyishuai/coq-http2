@@ -1,4 +1,4 @@
-From Coq Require Import Vector BinNat.
+From Coq Require Import Vector BinNat ByteVector.
 From ExtLib Require Import
      Data.Nat
      Structures.Monad
@@ -8,7 +8,6 @@ Import MonadNotation.
 From HTTP2 Require Import
      Types.
 From HTTP2.Util Require Import
-     ByteVector
      StringUtil.
 Import VectorNotations.
 

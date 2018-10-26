@@ -1,6 +1,6 @@
 From HTTP2 Require Import Types.
-From HTTP2.Util Require Import BitField ByteVector BitVector VectorUtil.
-From Coq Require Import Basics Bvector String BinNat List Ascii Vector.
+From HTTP2.Util Require Import BitField BitVector VectorUtil.
+From Coq Require Import Basics Bvector ByteVector String BinNat List Ascii Vector.
 
 Import VectorNotations.
 Open Scope N_scope.
@@ -12,7 +12,7 @@ Definition pad_len (p:option N) : string :=
   | None => ""
   | Some n =>
     (* Pad Length? (8) *)
-    to_string (ByteVector_of_N 1 n)
+    to_string (N2BV_sized 1 n)
   end.
 
 Definition padding (p:option N) : string :=
@@ -23,7 +23,7 @@ Definition padding (p:option N) : string :=
   end.
 
 Program Definition streamid_to_vector (E:bool) (sid:StreamId) : ByteVector 4 :=
-  ByteVector_of_Bvector (E :: sid).
+  of_Bvector (E :: sid).
 
 Definition streamid_to_string (E:bool) : StreamId -> string :=
   to_string ∘ streamid_to_vector E.
@@ -31,11 +31,11 @@ Definition streamid_to_string (E:bool) : StreamId -> string :=
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Program Definition encodeFrameHeader (ft: FrameType) (fh: FrameHeader) : ByteVector 9 :=
   (* Length (24) *)
-  let v_len := @ByteVector_of_Bvector 3 (payloadLength fh) in
+  let v_len := N2BV_sized 3 (payloadLength fh) in
   (* Type (8) *)
-  let v_ft := @ByteVector_of_N 1 (toFrameTypeId ft) in
+  let v_ft := N2BV_sized 1 (toFrameTypeId ft) in
   (* Flags (8) *)
-  let v_flgs := @ByteVector_of_Bvector 1 (flags fh) in
+  let v_flgs := @of_Bvector 1 (flags fh) in
   (* R is a reserved 1-bit field, MUST remain unset when sending and MUST be
      ignored when receiving. *)
   (* Stream Identifier (31) *)
@@ -46,7 +46,7 @@ Definition with_padding (payload:string) (padding':option Padding) :=
   match padding' with
   | Some padding =>
     let pad_len_N := N.of_nat (String.length padding) in
-    let pad_len := to_string (ByteVector_of_N 1 pad_len_N) in
+    let pad_len := to_string (N2BV_sized 1 pad_len_N) in
     pad_len ++ payload ++ padding
   | None => payload
   end.
@@ -67,7 +67,7 @@ Definition buildHeaders
        (* StreamDependency? (31) *)
        streamid_to_string (exclusive p) (streamDependency p) ++
        (* Weight? (8) *)
-       to_string (@ByteVector_of_Bvector 1 (weight p) )
+       to_string (@of_Bvector 1 (weight p) )
      end
      (* Header Block Fragment ( * ) *)
      ++ hbf)
@@ -80,25 +80,25 @@ Definition buildPriority (p:Priority) :=
   (* StreamDependency? (31) *)
   streamid_to_string (exclusive p) (streamDependency p) ++
   (* Weight? (8) *)
-  to_string (@ByteVector_of_Bvector 1 (weight p)).
+  to_string (@of_Bvector 1 (weight p)).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.4 *)
 Definition buildRSTStream (e:ErrorCode) :=
   (* Error Code (32) *)
-  to_string (@ByteVector_of_N 4 (toErrorCodeId e)).
+  to_string (N2BV_sized 4 (toErrorCodeId e)).
 
 Open Scope list_scope.
 Open Scope string_scope.
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.5 *)
-Program Fixpoint buildSettings_ (sets:list Setting) :
+Fixpoint buildSettings_ (sets:list Setting) :
   ByteVector (length sets * 6) :=
   match sets with
   | List.nil => []
   | (sk, sv) :: tl =>
     (* Identifier (16) *)
-     append (@ByteVector_of_Bvector 2 sk)
+     append (@of_Bvector 2 sk)
     (* Value (32) *)
-    (append (@ByteVector_of_Bvector 4 sv)
+    (append (@of_Bvector 4 sv)
             (buildSettings_ tl))
   end.
 
@@ -128,7 +128,7 @@ Definition buildGoAway (sid:StreamId) (e:ErrorCode) (s:string) :=
   (* Last-Stream-ID (31) *)
   streamid_to_string false sid ++
   (* Error Code (32) *)
-  to_string (@ByteVector_of_N 4 (toErrorCodeId e)) ++
+  to_string (N2BV_sized 4 (toErrorCodeId e)) ++
   (* Additional Debug Data ( * ) *)
   s.
 

@@ -1,5 +1,6 @@
 From Coq Require Import
      Bvector
+     ByteVector
      FMaps
      NArith
      OrderedTypeEx
@@ -11,7 +12,6 @@ From HTTP2 Require Import
 From HTTP2.Util Require Import
      BitField
      BitVector
-     ByteVector
      VectorUtil.
 Import ListNotations.
 Open Scope N_scope.
