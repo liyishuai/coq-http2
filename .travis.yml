@@ -34,6 +34,8 @@ install:
 - opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev || true
 - opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev || true
 - travis_wait 30 opam install $COQ coq-ext-lib.dev coq-paco coq-simple-io
+- opam update
+- travis_wait 30 opam upgrade
 - opam list
 - make -C InteractionTrees install -j
 script:
