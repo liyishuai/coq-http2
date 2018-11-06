@@ -6,7 +6,12 @@ From HTTP2.Util Require Import
      Parser
      VectorUtil
      StringUtil.
-From Coq Require Import NArith Bvector ByteVector Vector.
+From Coq Require Import
+     Bvector
+     ByteVector
+     NArith
+     Ndigits
+     Vector.
 From ExtLib Require Import Functor Monad MonadExc.
 Import FunctorNotation MonadNotations.
 Import IMonadNotations.
@@ -45,8 +50,8 @@ Program Definition decodeFrameHeader {m : nat -> Tycon}
         `{IMonad_nat m} `{MParser byte (m 1%nat)} :
   m 9%nat (FrameType * FrameHeader)%type :=
   icast (
-    let fromFrameTypeId' x := fromFrameTypeId (BV2N x) in
-    length         <-(BV2N)        iget_vec 3;;
+    let fromFrameTypeId' x := fromFrameTypeId (ByteV2N x) in
+    length         <-(ByteV2N)        iget_vec 3;;
     frameType      <-(fromFrameTypeId')       iget_vec 1;;
     flags          <-(to_Bvector)  iget_vec 1;;
     '(_, streamId) <- decodeStreamId;;              (* 4 *)
@@ -209,7 +214,7 @@ Definition decodeRSTStreamFrame :
   FramePayloadDecoder RSTStreamType :=
   fun _ _ _ _ _n _h =>
     (* n must be 4 *)
-    ecode <-(BV2N) get_vec 4;;
+    ecode <-(ByteV2N) get_vec 4;;
     ret (RSTStreamFrame (fromErrorCodeId ecode)).
 
 Definition decodeSetting {m : Tycon} `{Monad m} `{MParser byte m} :
@@ -251,7 +256,7 @@ Definition decodeGoAwayFrame :
   fun _ _ _ _ h n =>
     (* n must be at least 8 *)
     id <-(snd) unindex decodeStreamId;;
-    ecode <-(BV2N) get_vec 4;;
+    ecode <-(ByteV2N) get_vec 4;;
     debug <- get_bytes (N.to_nat (n - 8));;
     ret (GoAwayFrame id (fromErrorCodeId ecode) debug).
 

@@ -1,6 +1,15 @@
 From HTTP2 Require Import Types.
 From HTTP2.Util Require Import BitField BitVector VectorUtil.
-From Coq Require Import Basics Bvector ByteVector String BinNat List Ascii Vector.
+From Coq Require Import
+     Ascii
+     Basics
+     BinNat
+     Bvector
+     ByteVector
+     Ndigits
+     String
+     List
+     Vector.
 
 Import VectorNotations.
 Open Scope N_scope.
@@ -12,7 +21,7 @@ Definition pad_len (p:option N) : string :=
   | None => ""
   | Some n =>
     (* Pad Length? (8) *)
-    to_string (N2BV_sized 1 n)
+    to_string (N2ByteV_sized 1 n)
   end.
 
 Definition padding (p:option N) : string :=
@@ -31,9 +40,9 @@ Definition streamid_to_string (E:bool) : StreamId -> string :=
 (* https://http2.github.io/http2-spec/index.html#rfc.section.4.1 *)
 Program Definition encodeFrameHeader (ft: FrameType) (fh: FrameHeader) : ByteVector 9 :=
   (* Length (24) *)
-  let v_len := N2BV_sized 3 (payloadLength fh) in
+  let v_len := N2ByteV_sized 3 (payloadLength fh) in
   (* Type (8) *)
-  let v_ft := N2BV_sized 1 (toFrameTypeId ft) in
+  let v_ft := N2ByteV_sized 1 (toFrameTypeId ft) in
   (* Flags (8) *)
   let v_flgs := @of_Bvector 1 (flags fh) in
   (* R is a reserved 1-bit field, MUST remain unset when sending and MUST be
@@ -46,7 +55,7 @@ Definition with_padding (payload:string) (padding':option Padding) :=
   match padding' with
   | Some padding =>
     let pad_len_N := N.of_nat (String.length padding) in
-    let pad_len := to_string (N2BV_sized 1 pad_len_N) in
+    let pad_len := to_string (N2ByteV_sized 1 pad_len_N) in
     pad_len ++ payload ++ padding
   | None => payload
   end.
@@ -85,7 +94,7 @@ Definition buildPriority (p:Priority) :=
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.4 *)
 Definition buildRSTStream (e:ErrorCode) :=
   (* Error Code (32) *)
-  to_string (N2BV_sized 4 (toErrorCodeId e)).
+  to_string (N2ByteV_sized 4 (toErrorCodeId e)).
 
 Open Scope list_scope.
 Open Scope string_scope.
@@ -128,7 +137,7 @@ Definition buildGoAway (sid:StreamId) (e:ErrorCode) (s:string) :=
   (* Last-Stream-ID (31) *)
   streamid_to_string false sid ++
   (* Error Code (32) *)
-  to_string (N2BV_sized 4 (toErrorCodeId e)) ++
+  to_string (N2ByteV_sized 4 (toErrorCodeId e)) ++
   (* Additional Debug Data ( * ) *)
   s.
 

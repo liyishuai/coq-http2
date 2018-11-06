@@ -25,8 +25,8 @@ Definition isResponse (v : StreamId) : bool := existsb id v && negb (hd v).
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.5.3.2 *)
 Definition Weight := Bvector 8.
-Coercion Weight2N := Bv2N       8 : Weight -> N.
-Coercion N2Weight := N2Bv_gen 8 : N -> Weight.
+Coercion Weight2N := Bv2N         : Weight -> N.
+Coercion N2Weight := N2Bv_sized 8 : N -> Weight.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6.2 *)
 Definition HeaderBlockFragment := string.
@@ -42,10 +42,10 @@ Inductive Priority :=
 Definition SettingValue := Bvector 32.
 Definition SettingKey   := Bvector 16.
 Definition SettingKeyId := N.
-Coercion SettingValue2N := Bv2N       32 : SettingValue -> N.
-Coercion N2SettingValue := N2Bv_gen 32 : N -> SettingValue.
-Coercion SettingKey2Id  := Bv2N       16 : SettingKey   -> SettingKeyId.
-Coercion Id2SettingKey  := N2Bv_gen 16 : SettingKeyId -> SettingKey.
+Coercion SettingValue2N := Bv2N          : SettingValue -> N.
+Coercion N2SettingValue := N2Bv_sized 32 : N -> SettingValue.
+Coercion SettingKey2Id  := Bv2N          : SettingKey   -> SettingKeyId.
+Coercion Id2SettingKey  := N2Bv_sized 16 : SettingKeyId -> SettingKey.
 Definition SettingHeaderTableSize      : SettingKeyId := 1.
 Definition SettingEnablePush           : SettingKeyId := 2.
 Definition SettingMaxConcurrentStreams : SettingKeyId := 3.
@@ -72,8 +72,8 @@ Definition WindowSize := Bvector 31.
 (* https://http2.github.io/http2-spec/index.html#rfc.section.7 *)
 Definition ErrorCodeId := N.
 Definition ErrorCode   := Bvector 32.
-Coercion toErrorCodeId   := Bv2N 32       : ErrorCode -> ErrorCodeId.
-Coercion fromErrorCodeId := N2Bv_gen 32 : ErrorCodeId -> ErrorCode.
+Coercion toErrorCodeId   := Bv2N          : ErrorCode -> ErrorCodeId.
+Coercion fromErrorCodeId := N2Bv_sized 32 : ErrorCodeId -> ErrorCode.
 
 Definition NoError            : ErrorCodeId :=  0.
 Definition ProtocolError      : ErrorCodeId :=  1.
@@ -101,8 +101,8 @@ Inductive  FrameHeader :=
     flags         : FrameFlagsField;
     streamId      : StreamId
   }.
-Coercion PayloadLength2N := Bv2N 24       : PayloadLength -> N.
-Coercion N2PayloadLength := N2Bv_gen 24 : N -> PayloadLength.
+Coercion PayloadLength2N := Bv2N          : PayloadLength -> N.
+Coercion N2PayloadLength := N2Bv_sized 24 : N -> PayloadLength.
 
 (* https://http2.github.io/http2-spec/index.html#rfc.section.6 *)
 Definition FrameTypeId    := N.
