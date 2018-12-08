@@ -5,43 +5,38 @@ cache:
   directories:
   - "$HOME/.opam"
   - "$HOME/Library/Caches/Homebrew"
-addons:
-  apt:
-    sources:
-    - avsm
-    packages:
-    - opam
-    - aspcud
 env:
   global:
   - OPAMYES=true
   - COQ="coq.dev"
   matrix:
-  - COMPILER="4.05.0"
+  - OCAML_VERSION=4.05
 matrix:
   fast_finish: true
   allow_failures:
   - os: osx
 os:
 - linux
-before_install: if [ $TRAVIS_OS_NAME = osx ]; then brew update; brew install opam; fi
+before_install: curl -L https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-ocaml.sh | sh
 install:
-- opam init --compiler $COMPILER
 - eval $(opam config env)
 - opam config var root
 - ocamlc -v
 - opam repo add coq-released https://coq.inria.fr/opam/released || true
 - opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev || true
 - opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev || true
-- travis_wait 30 opam install $COQ coq-ext-lib.dev coq-paco coq-simple-io
+- travis_wait 30 opam install $COQ coq-ext-lib.dev coq-paco ocamlbuild
+- opam pin add coq-simple-io 0.2
 - opam update
 - travis_wait 30 opam upgrade
 - opam list
-- make -C InteractionTrees install -j
+- opam pin add InteractionTrees
 script:
 - set -e
 - travis_retry make -j
 - travis_retry make -C test -j
 notifications:
   slack:
-    secure: e0s+oq1d5BYea7RMvlItGs7YHqm2bO8O4ox3PkUM2nFuXgYt8Ej6OZvNWBiJgZj4MrpeIuFGjHFEB0ZGto1WPRvUp1y9OMXcB0r8Z/g2oENEY+iqUQWQh0kFMiy9GK4TrSytYMoRdFEUHKSaNyutN0WQHvWsDHTlMxwalwoTc+Wre2qV/abRgMC2vbQfhlt1ZszZyZQ1oIJzBcMDljSoZlzDvWjpFRASQ5k7MSTyCLVXjA9xGHXaZ8ucCaf6KYswq2yEp2c49OdH/ts22IhtiMDkHVKVcl6Vk5YItpPv7oqWlDdsTeNffDfjQz/ne4vgThGorMntrSaSwbnDC4GIHeXEGfNwbL2Z037jNDmF/YpFyvKj+bCP5RJCwuHuR7jhONbkm1UoUVKQVgHi3+qn9gWZ61gYz7njrc+jagspmYuWRNYOsz6S+X/CfI1DOR4f5I5oF22ufpnDYhDFLEtbjwj3K5WUBfdzCJyV7tRnmmuRkAE1Y69iuNO2lv40M8nO8iTfX0g53gVNqP+Qbn0J+jqfcjFKDZgJgBV9anE9PIAJl72rNznbI6G6mVZvmeTQXMs0llu0TTo8SLc61WK8jUI/Y3SwQhoaoiH9ppTmbviTEyYNb8Dawi1Noy3W3wF7CFkSzqQXVJ4sWCEDX3L/VD7ooP6rX3GrKQomAGKM6yo=
+    on_success: :change
+    rooms:
+    - secure: e0s+oq1d5BYea7RMvlItGs7YHqm2bO8O4ox3PkUM2nFuXgYt8Ej6OZvNWBiJgZj4MrpeIuFGjHFEB0ZGto1WPRvUp1y9OMXcB0r8Z/g2oENEY+iqUQWQh0kFMiy9GK4TrSytYMoRdFEUHKSaNyutN0WQHvWsDHTlMxwalwoTc+Wre2qV/abRgMC2vbQfhlt1ZszZyZQ1oIJzBcMDljSoZlzDvWjpFRASQ5k7MSTyCLVXjA9xGHXaZ8ucCaf6KYswq2yEp2c49OdH/ts22IhtiMDkHVKVcl6Vk5YItpPv7oqWlDdsTeNffDfjQz/ne4vgThGorMntrSaSwbnDC4GIHeXEGfNwbL2Z037jNDmF/YpFyvKj+bCP5RJCwuHuR7jhONbkm1UoUVKQVgHi3+qn9gWZ61gYz7njrc+jagspmYuWRNYOsz6S+X/CfI1DOR4f5I5oF22ufpnDYhDFLEtbjwj3K5WUBfdzCJyV7tRnmmuRkAE1Y69iuNO2lv40M8nO8iTfX0g53gVNqP+Qbn0J+jqfcjFKDZgJgBV9anE9PIAJl72rNznbI6G6mVZvmeTQXMs0llu0TTo8SLc61WK8jUI/Y3SwQhoaoiH9ppTmbviTEyYNb8Dawi1Noy3W3wF7CFkSzqQXVJ4sWCEDX3L/VD7ooP6rX3GrKQomAGKM6yo=
