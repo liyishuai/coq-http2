@@ -1,6 +1,10 @@
 From Coq Require Import
      NArith
-     Bool.Bvector.
+     Bool.Bvector
+     ByteVector
+     String.
+
+Import StringSyntax.
 
 From ExtLib.Data Require Import Monads.EitherMonad.
 
@@ -13,7 +17,6 @@ From HTTP2 Require Import
      Pretty
      Types
      Util.BitVector
-     Util.ByteVector
      Util.IO
      Util.Parser.
 
@@ -25,12 +28,12 @@ Import IONotations.
 
 Definition example_ping_frame : Frame := {|
   frameHeader := {|
-    payloadLength := Bvector_of_N 8;
-    flags := Bvector_of_N 0;
-    streamId := Bvector_of_N 0;
+    payloadLength := N2Bv_sized _ 8;
+    flags := N2Bv_sized _ 0;
+    streamId := N2Bv_sized _ 0;
   |};
   frameType := PingType;
-  framePayload := PingFrame (ByteVector_of_N _ 0);
+  framePayload := PingFrame (N2ByteV_sized _ 0);
 |}.
 
 Definition main : IO unit :=
